@@ -261,107 +261,126 @@ function BlueprintCanvas({ questions, setQuestions, initialNodes, initialEdges }
 export default function BlueprintPage() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [initialData, setInitialData] = useState<{nodes: Node[], edges: Edge[]} | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+
+  const generateGraph = useCallback((data: any[], filter: string | null) => {
+    // Filter data based on activeFilter
+    const filteredData = data.filter((q) => {
+      if (!filter) return true; // All
+      return !q.cohort || q.cohort === filter;
+    });
+
+    const nodes: Node[] = [];
+    const edges: Edge[] = [];
+    let yOffset = 50;
+    const xOffsetMap: Record<string, number> = {};
+
+    filteredData.forEach((q: any, idx: number) => {
+      const block = q.block || '0';
+      if (!xOffsetMap[block]) {
+         xOffsetMap[block] = Object.keys(xOffsetMap).length * 450 + 50;
+      }
+
+      const x = q.position?.x ?? xOffsetMap[block];
+      const y = q.position?.y ?? (yOffset + (idx * 220)) % 2000;
+
+      nodes.push({
+        id: q.id,
+        type: 'questionNode',
+        position: { x, y }, 
+        data: { ...q },
+      });
+
+      // Create edges based on dependsOn
+      if (q.dependsOn && q.dependsOn.questionId) {
+         // Only add edge if target exists in filtered data
+         if (filteredData.some(t => t.id === q.dependsOn.questionId)) {
+           edges.push({
+             id: `e-${q.dependsOn.questionId}-${q.id}`,
+             source: q.dependsOn.questionId,
+             target: q.id,
+             sourceHandle: 'branch-source',
+             targetHandle: 'branch-target',
+             type: 'bezier',
+             data: { isBranch: true },
+             label: Array.isArray(q.dependsOn.value) ? q.dependsOn.value.join(' ИЛИ ') : q.dependsOn.value,
+             style: { stroke: '#A04A84', strokeWidth: 2 },
+             labelBgStyle: { fill: '#1E1515', fillOpacity: 0.9, stroke: '#A04A84', strokeWidth: 1, rx: 12, ry: 12 },
+             labelBgPadding: [8, 4],
+             labelStyle: { fill: '#f0f0f0', fontWeight: 700, fontSize: 10, letterSpacing: '1px' },
+             markerEnd: {
+               type: MarkerType.ArrowClosed,
+               color: '#A04A84',
+             },
+           });
+         }
+      }
+      
+      // Connect to next question in same block if no explicit dependency
+      const nextQ = filteredData[idx + 1];
+      if (nextQ && nextQ.block === q.block && !nextQ.dependsOn) {
+        edges.push({
+           id: `seq-${q.id}-${nextQ.id}`,
+           source: q.id,
+           target: nextQ.id,
+           sourceHandle: 'seq-source',
+           targetHandle: 'seq-target',
+           type: 'smoothstep',
+           data: { isBranch: false },
+           style: { stroke: '#4a3a3a', strokeWidth: 2 },
+           markerEnd: {
+             type: MarkerType.ArrowClosed,
+             color: '#4a3a3a',
+           },
+        });
+      }
+    });
+
+    // Automatically apply dagre layout on initial load or filter change
+    const hasSavedPositions = filteredData.some((q: any) => q.position && q.position.x !== undefined);
+    
+    if (!hasSavedPositions || filter !== null) {
+      const dagreGraph = new dagre.graphlib.Graph();
+      dagreGraph.setDefaultEdgeLabel(() => ({}));
+      dagreGraph.setGraph({ rankdir: 'TB', nodesep: 400, ranksep: 300 });
+      
+      nodes.forEach((node) => {
+        dagreGraph.setNode(node.id, { width: 340, height: 250 });
+      });
+      
+      edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+      });
+      
+      dagre.layout(dagreGraph);
+      
+      nodes.forEach((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        node.position = {
+          x: nodeWithPosition.x - 340 / 2,
+          y: nodeWithPosition.y - 250 / 2,
+        };
+      });
+    }
+
+    setInitialData({ nodes, edges });
+  }, []);
 
   useEffect(() => {
     fetch('/api/questions')
       .then(res => res.json())
       .then(data => {
         setQuestions(data);
-        const nodes: Node[] = [];
-        const edges: Edge[] = [];
-
-        let yOffset = 50;
-        const xOffsetMap: Record<string, number> = {};
-
-        data.forEach((q: any, idx: number) => {
-          const block = q.block || '0';
-          if (!xOffsetMap[block]) {
-             xOffsetMap[block] = Object.keys(xOffsetMap).length * 450 + 50;
-          }
-
-          const x = q.position?.x ?? xOffsetMap[block];
-          const y = q.position?.y ?? (yOffset + (idx * 220)) % 2000;
-
-          nodes.push({
-            id: q.id,
-            type: 'questionNode',
-            position: { x, y }, 
-            data: { ...q },
-          });
-
-          // Create edges based on dependsOn
-          if (q.dependsOn && q.dependsOn.questionId) {
-             edges.push({
-               id: `e-${q.dependsOn.questionId}-${q.id}`,
-               source: q.dependsOn.questionId,
-               target: q.id,
-               sourceHandle: 'branch-source',
-               targetHandle: 'branch-target',
-               type: 'bezier',
-               data: { isBranch: true },
-               label: Array.isArray(q.dependsOn.value) ? q.dependsOn.value.join(' ИЛИ ') : q.dependsOn.value,
-               style: { stroke: '#A04A84', strokeWidth: 2 },
-               labelBgStyle: { fill: '#1E1515', fillOpacity: 0.9, stroke: '#A04A84', strokeWidth: 1, rx: 12, ry: 12 },
-               labelBgPadding: [8, 4],
-               labelStyle: { fill: '#f0f0f0', fontWeight: 700, fontSize: 10, letterSpacing: '1px' },
-               markerEnd: {
-                 type: MarkerType.ArrowClosed,
-                 color: '#A04A84',
-               },
-             });
-          }
-          
-          // Connect to next question in same block if no explicit dependency
-          const nextQ = data[idx + 1];
-          if (nextQ && nextQ.block === q.block && !nextQ.dependsOn) {
-            edges.push({
-               id: `seq-${q.id}-${nextQ.id}`,
-               source: q.id,
-               target: nextQ.id,
-               sourceHandle: 'seq-source',
-               targetHandle: 'seq-target',
-               type: 'smoothstep',
-               data: { isBranch: false },
-               style: { stroke: '#4a3a3a', strokeWidth: 2 },
-               markerEnd: {
-                 type: MarkerType.ArrowClosed,
-                 color: '#4a3a3a',
-               },
-            });
-          }
-        });
-
-        // Automatically apply dagre layout on initial load to ensure a beautiful picture right away,
-        // unless the user has explicitly saved positions for all nodes.
-        const hasSavedPositions = data.some((q: any) => q.position && q.position.x !== undefined);
-        
-        if (!hasSavedPositions) {
-          const dagreGraph = new dagre.graphlib.Graph();
-          dagreGraph.setDefaultEdgeLabel(() => ({}));
-          dagreGraph.setGraph({ rankdir: 'TB', nodesep: 400, ranksep: 300 });
-          
-          nodes.forEach((node) => {
-            dagreGraph.setNode(node.id, { width: 340, height: 250 });
-          });
-          
-          edges.forEach((edge) => {
-            dagreGraph.setEdge(edge.source, edge.target);
-          });
-          
-          dagre.layout(dagreGraph);
-          
-          nodes.forEach((node) => {
-            const nodeWithPosition = dagreGraph.node(node.id);
-            node.position = {
-              x: nodeWithPosition.x - 340 / 2,
-              y: nodeWithPosition.y - 250 / 2,
-            };
-          });
-        }
-
-        setInitialData({ nodes, edges });
+        generateGraph(data, activeFilter);
       });
   }, []);
+
+  // Update graph when filter changes
+  useEffect(() => {
+    if (questions.length > 0) {
+      generateGraph(questions, activeFilter);
+    }
+  }, [activeFilter, generateGraph]); // questions omitted deliberately or it will double render
 
   if (!initialData) return (
     <div className="flex items-center justify-center h-[50vh]">
@@ -374,12 +393,28 @@ export default function BlueprintPage() {
       <div className="flex justify-between items-end shrink-0 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
         <div>
           <h1 className="text-4xl font-black tracking-tight sp-title"><span>Blueprint: Граф вопросов</span></h1>
-          <p className="text-foreground-secondary mt-3 text-lg">Визуализация связей и логики ветвления анкеты</p>
+          <div className="flex items-center gap-4 mt-3">
+            <p className="text-foreground-secondary text-lg">Визуализация связей и логики ветвления анкеты</p>
+            
+            <div className="flex items-center gap-2 bg-surface-raised px-3 py-1.5 rounded-xl border border-foreground-tertiary/20 ml-4">
+              <span className="text-sm font-bold text-foreground-tertiary uppercase tracking-wider">Когорта:</span>
+              <select
+                value={activeFilter || ''}
+                onChange={(e) => setActiveFilter(e.target.value === '' ? null : e.target.value)}
+                className="bg-transparent text-sm text-plum font-bold outline-none cursor-pointer"
+              >
+                <option value="">Все вопросы</option>
+                <option value="GRADE_1_4">1-4 классы</option>
+                <option value="GRADE_5_8">5-8 классы</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
       <ReactFlowProvider>
         <BlueprintCanvas 
+          key={activeFilter || 'all'}
           questions={questions} 
           setQuestions={setQuestions} 
           initialNodes={initialData.nodes} 

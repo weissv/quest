@@ -29,20 +29,25 @@ export default function BlockHeader({
 
   return (
     <div
-      className={`mb-8 ${showTransition ? 'animate-fade-in' : ''}`}
+      className={`mb-8 ${showTransition ? 'animate-fade-in-up' : ''}`}
     >
       <div className="flex items-center gap-4 mb-2">
-        <span className={`text-3xl p-2 rounded-xl border ${styles.iconBg}`}>{meta.icon}</span>
+        <span className={`text-3xl p-2 rounded-xl border ${styles.iconBg} ${showTransition ? 'animate-[scaleIn_0.4s_ease-out]' : ''}`}>
+          {meta.icon}
+        </span>
         <div>
           <div className="mb-1">
-            <span className={`badge ${styles.badge}`}>Блок {block}</span>
+            <span className={`badge ${styles.badge} shadow-sm`}>Блок {block}</span>
           </div>
-          <h2 className={`${styles.title} text-xl md:text-2xl font-bold tracking-tight`}>
+          <h2 className={`${styles.title} text-xl md:text-2xl font-bold tracking-tight drop-shadow-sm`}>
             <span>{meta.title}</span>
           </h2>
         </div>
       </div>
-      <p className="text-sm text-foreground-secondary pl-[4.5rem]">
+      <p 
+        className={`text-sm text-foreground-secondary pl-[4.5rem] leading-relaxed ${showTransition ? 'animate-fade-in' : ''}`} 
+        style={{ animationDelay: '150ms', animationFillMode: 'both' }}
+      >
         {meta.subtitle}
       </p>
     </div>

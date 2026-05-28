@@ -38,15 +38,10 @@ export default function QuestionCard({
             placeholder={
               code === '0.1'
                 ? 'Введите семейный код...'
-                : 'Ваш развёрнутый ответ (минимум 150 символов)...'
+                : 'Ваш развёрнутый ответ...'
             }
             maxLength={code === '0.1' ? 50 : 2000}
           />
-          {question.block === 'B' && (
-            <div className={`text-xs text-right font-mono ${currentAnswer.length < 150 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {currentAnswer.length} / 150 символов
-            </div>
-          )}
         </div>
       )}
 

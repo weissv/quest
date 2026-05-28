@@ -64,7 +64,7 @@ export default function QuestionForm({ initialData, onSave, onCancel, saving }: 
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-bold text-foreground-secondary uppercase tracking-wider">Блок анкеты</label>
             <select
@@ -77,6 +77,19 @@ export default function QuestionForm({ initialData, onSave, onCancel, saving }: 
               <option value="B">Блок B (Верификация)</option>
               <option value="C">Блок C (Кросс-валидация)</option>
               <option value="D">Блок D (Мотивация)</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-foreground-secondary uppercase tracking-wider">Целевая когорта</label>
+            <select
+              value={formData.cohort || ''}
+              onChange={(e) => handleChange('cohort', e.target.value === '' ? null : e.target.value)}
+              className="text-input"
+            >
+              <option value="">Для всех возрастов</option>
+              <option value="GRADE_1_4">1-4 классы</option>
+              <option value="GRADE_5_8">5-8 классы</option>
             </select>
           </div>
 

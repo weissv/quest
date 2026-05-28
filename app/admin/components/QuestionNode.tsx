@@ -69,9 +69,16 @@ export default function QuestionNode({ data, isConnectable }: any) {
       />
       
       <div className="flex justify-between items-center mb-3">
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest border uppercase ${styles.badge}`}>
-          БЛОК {data.block}.{data.id.replace('q-', '')}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest border uppercase ${styles.badge}`}>
+            БЛОК {data.block}.{data.id.replace('q-', '')}
+          </span>
+          {data.cohort && (
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-[9px] font-black tracking-widest border uppercase bg-indigo-500/10 border-indigo-500/30 text-indigo-400">
+              {data.cohort === 'GRADE_1_4' ? '1-4 КЛАСС' : '5-8 КЛАСС'}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-foreground-tertiary font-mono uppercase tracking-widest">{data.type}</span>
           <Maximize2 className="w-3.5 h-3.5 text-foreground-tertiary opacity-0 group-hover:opacity-100 transition-opacity" />

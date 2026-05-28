@@ -6,22 +6,23 @@ export default function Home() {
       <div className="fixed top-0 left-0 w-full h-full gradient-mesh opacity-30 pointer-events-none -z-10" />
       <div className="max-w-3xl mx-auto pt-8 md:pt-16 pb-20 p-4 md:p-8 relative z-10">
         {/* Hero header */}
-        <header className="mb-10 md:mb-14 animate-fade-in glass-card p-8 md:p-10 relative overflow-hidden">
-          {/* Subtle glow accent */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-plum/10 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
+        <header className="mb-10 md:mb-14 animate-fade-in-up glass-card-elevated p-8 md:p-12 relative overflow-hidden group">
+          {/* Subtle glow accents */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-plum/20 rounded-full blur-[100px] -z-10 pointer-events-none transition-transform duration-700 group-hover:scale-110"></div>
+          <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-teal/15 rounded-full blur-[90px] -z-10 pointer-events-none animate-pulse-slow"></div>
           
           {/* Version badge */}
-          <div className="inline-flex items-center gap-2 mb-6">
-            <span className="badge badge-accent shadow-glow">V2.0</span>
-            <span className="text-xs text-plum-light font-bold uppercase tracking-widest">
+          <div className="inline-flex items-center gap-3 mb-8">
+            <span className="badge badge-accent shadow-glow-lg animate-fade-in">V2.0</span>
+            <span className="text-xs text-plum-light font-bold uppercase tracking-widest opacity-90">
               Анкета для семьи
             </span>
           </div>
 
           {/* Title */}
-          <h1 className="sp-title text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.2] mb-5">
+          <h1 className="sp-title text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] mb-6 drop-shadow-md">
             Знакомство <br className="hidden md:block" />
-            <span>с семьёй</span>
+            <span className="mt-2 inline-block shadow-glass">с семьёй</span>
           </h1>
 
           {/* Subtitle — warm, approachable language for parents */}

@@ -88,21 +88,21 @@ export default function SlidersMatrix({ value, onChange }: SlidersMatrixProps) {
           max="100"
           value={values[key]}
           onChange={(e) => handleChange(key, parseInt(e.target.value, 10))}
-          className="w-full h-2 bg-foreground-tertiary/20 rounded-lg appearance-none cursor-pointer accent-plum"
+          className="w-full h-3 bg-black/30 rounded-lg appearance-none cursor-pointer border border-white/5 accent-plum shadow-inner transition-all hover:bg-black/40"
         />
       </div>
     );
   };
 
   return (
-    <div className="p-6 bg-foreground-tertiary/5 rounded-2xl border border-foreground-tertiary/10">
-      {renderSlider('school', 'Школа (учителя, кураторы, система)', 'text-blue-500')}
-      {renderSlider('family', 'Семья (родители, репетиторы от родителей)', 'text-emerald-500')}
-      {renderSlider('child', 'Ребенок (сам ученик)', 'text-plum')}
+    <div className="glass-card p-6 md:p-8 animate-fade-in-up mt-4">
+      {renderSlider('school', 'Школа (учителя, кураторы, система)', 'text-teal-light')}
+      {renderSlider('family', 'Семья (родители, репетиторы от родителей)', 'text-success')}
+      {renderSlider('child', 'Ребенок (сам ученик)', 'text-plum-light')}
 
-      <div className="mt-8 pt-4 border-t border-foreground-tertiary/20 flex justify-between items-center">
-        <span className="text-foreground-secondary">Сумма ответственности:</span>
-        <span className={`font-bold text-xl ${values.school + values.family + values.child === 100 ? 'text-emerald-500' : 'text-red-500'}`}>
+      <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
+        <span className="text-foreground-secondary font-medium">Сумма ответственности:</span>
+        <span className={`font-bold text-xl ${values.school + values.family + values.child === 100 ? 'text-success' : 'text-rose-500'}`}>
           {values.school + values.family + values.child}%
         </span>
       </div>

@@ -88,14 +88,17 @@ export default function ProgressBar({
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-2.5 bg-surface-raised rounded-full overflow-hidden border border-surface-overlay">
+      <div className="relative h-2.5 bg-surface-raised rounded-full overflow-hidden border border-surface-overlay/50 shadow-inner">
         <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
+          className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{
             width: `${progress}%`,
-            background: '#A04A84', /* Solid plum */
+            background: 'linear-gradient(90deg, #7A3466 0%, #A04A84 50%, #B86A9E 100%)',
           }}
-        />
+        >
+          {/* Subtle glow effect on the tip of the progress bar */}
+          <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-r from-transparent to-white/40 blur-[2px] rounded-r-full animate-pulse-slow" />
+        </div>
       </div>
 
       {/* Step counter */}
