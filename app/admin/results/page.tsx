@@ -51,6 +51,15 @@ function aggregateFamily(results: EvaluationResult[]): FamilyProfile {
   // Latest update time
   const updatedAt = Math.max(...results.map(r => new Date(r.createdAt || 0).getTime()));
 
+  // Behavioral Flags
+  const flagsSet = new Set<string>();
+  results.forEach(r => {
+    if (r.behavioralFlags && Array.isArray(r.behavioralFlags)) {
+      r.behavioralFlags.forEach(f => flagsSet.add(f));
+    }
+  });
+  const behavioralFlags = Array.from(flagsSet);
+
   return {
     code,
     results,
@@ -58,6 +67,7 @@ function aggregateFamily(results: EvaluationResult[]): FamilyProfile {
     aiAverage,
     totalScore,
     status,
+    behavioralFlags,
     updatedAt
   };
 }

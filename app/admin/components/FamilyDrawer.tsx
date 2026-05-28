@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FamilyProfile, EvaluationResult } from '@/types';
-import { X, Cpu, Target, User, BarChart } from 'lucide-react';
+import { X, Cpu, Target, User, BarChart, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface FamilyDrawerProps {
@@ -77,6 +77,22 @@ export default function FamilyDrawer({ family, onClose }: FamilyDrawerProps) {
               <p className="text-3xl font-black text-violet-400">{family.totalScore.toFixed(1)}</p>
             </div>
           </div>
+
+          {/* Behavioral Flags */}
+          {family.behavioralFlags && family.behavioralFlags.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-rose-400 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" /> Поведенческие Флаги
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {family.behavioralFlags.map((flag, idx) => (
+                  <span key={idx} className="px-3 py-1.5 rounded-lg text-xs font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    {flag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* AI Reasoning (Aggregated or side-by-side) */}
           <div className="space-y-4">

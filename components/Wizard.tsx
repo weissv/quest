@@ -76,8 +76,16 @@ export default function Wizard() {
   const isLastQuestion = currentStepIndex === filteredQuestions.length - 1;
   const currentAnswer = currentQuestion ? answers[currentQuestion.code || ''] : undefined;
   
-  const canProceed = currentAnswer !== undefined && currentAnswer !== null && 
-    (typeof currentAnswer === 'number' || (typeof currentAnswer === 'string' && currentAnswer.trim().length > 0) || Array.isArray(currentAnswer));
+  let canProceed = false;
+  if (currentAnswer !== undefined && currentAnswer !== null) {
+    if (typeof currentAnswer === 'number' || Array.isArray(currentAnswer)) {
+      canProceed = true;
+    } else if (typeof currentAnswer === 'string') {
+      const isBlockB = currentQuestion?.block === 'B';
+      const minLength = isBlockB ? 150 : 1;
+      canProceed = currentAnswer.trim().length >= minLength;
+    }
+  }
     
   const progress = filteredQuestions.length > 0 ? Math.round(
     ((currentStepIndex + 1) / filteredQuestions.length) * 100

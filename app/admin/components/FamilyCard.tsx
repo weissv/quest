@@ -82,6 +82,21 @@ export default function FamilyCard({ family, onClick }: FamilyCardProps) {
             {totalScore.toFixed(1)}
           </span>
         </div>
+
+        {family.behavioralFlags && family.behavioralFlags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {family.behavioralFlags.slice(0, 3).map((flag, idx) => (
+              <span key={idx} className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20 break-words max-w-full">
+                {flag.length > 25 ? flag.substring(0, 25) + '...' : flag}
+              </span>
+            ))}
+            {family.behavioralFlags.length > 3 && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-white/40 border border-white/10">
+                +{family.behavioralFlags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

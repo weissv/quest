@@ -55,6 +55,7 @@ export interface EvaluationResult {
   aiAnalysis: AIVerdict | null;
   createdAt?: string | Date;
   dyadMetrics?: any;
+  behavioralFlags?: string[];
 }
 
 export interface FamilyProfile {
@@ -64,6 +65,7 @@ export interface FamilyProfile {
   sjtAverage: number;
   aiAverage: number;
   totalScore: number;
+  behavioralFlags: string[];
   updatedAt: number;
 }
 

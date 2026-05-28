@@ -55,6 +55,7 @@ model Result {
   evalStatus  EvaluationStatus?
   aiAnalysis  Json?
   aiReasoning String?
+  behavioralFlags String[]  @default([])
   dyadMetrics Json?
   createdAt   DateTime          @default(now())
 

@@ -9,6 +9,7 @@ lerna-debug.log*
 .next/
 build/
 dist/
+qu/
 database_dump.md
 database_export.md
 
