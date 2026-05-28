@@ -1,133 +1,119 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getQuestions, saveResult } from '@/lib/db';
+import { prisma } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
     const { answers } = await req.json();
 
     if (!answers || typeof answers !== 'object') {
-      return NextResponse.json(
-        { error: 'Invalid request body: missing answers' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
-    const questions = await getQuestions();
+    const questions = await prisma.question.findMany();
 
-    // ── 1. Calculate SJT Score ──
+    // ── 1. Calculate SJT Score (Block A) ──
     let sjtScore = 0;
-    questions.forEach((q: any) => {
-      if (q.block === 'A' && q.options) {
-        const selectedOption = q.options.find(
-          (opt: any) => opt.label === answers[q.id]
-        );
-        if (selectedOption && typeof selectedOption.weight === 'number') {
-          sjtScore += selectedOption.weight;
-        }
-      }
-    });
-
-    // ── 2. Determine status ──
-    let status = '';
-    let aiVerdict = null;
-
-    if (sjtScore >= 9) {
-      status = '✅ Прямое зачисление';
-    } else if (sjtScore < 5) {
-      status = '❌ Не совместимо';
-    } else {
-      status = '🟡 Блок B + собеседование (Требуется верификация AI)';
-
-      // ── 3. Collect open-ended answers for AI analysis ──
-      const openAnswers = Object.entries(answers)
-        .filter(([key]) => key.startsWith('B') || key.startsWith('D'))
-        .map(([key, val]) => `Вопрос ${key}: ${val}`)
-        .join('\n');
-
-      const aiPrompt = `
-Ты — школьный психолог и методист, работающий в модели формирования субъектности. Проанализируй ответы родителей на открытые вопросы анкеты. 
-Не ищи ключевые слова. Ищи поведенческие паттерны.
-
-Для каждого ответа оцени по шкале 0-2:
-0 = Потребительская/спасательская позиция. Локус контроля внешний. Готовность ломать рамку при дискомфорте.
-1 = Нейтральная/декларативная позиция. Понимание теории, но нет конкретики действий. Избегание цены выбора.
-2 = Партнёрская/субъектная позиция. Конкретные шаги. Готовность удерживать рамку без насилия. Принятие фрустрации как части роста. Ясный локус ответственности.
-
-Ответы:
-${openAnswers}
-
-Выведи строго в формате JSON:
-{
-  "scores": { "B1": 0, "B2": 0, "B3": 0, "B4": 0 },
-  "riskFlags": true,
-  "recommendation": "Зачислить",
-  "comment": "Краткое обоснование"
-}
-`.trim();
-
-      // ── 4. Call Gemini API ──
-      if (process.env.GEMINI_API_KEY) {
-        try {
-          const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-          const model = genAI.getGenerativeModel({
-            model: 'gemini-1.5-pro',
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.3,
-            },
-          });
-
-          const result = await model.generateContent(aiPrompt);
-          const response = result.response;
-          const text = response.text();
-
-          try {
-            // Parse JSON from response (handle potential markdown wrapping)
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              aiVerdict = JSON.parse(jsonMatch[0]);
-            } else {
-              aiVerdict = { rawText: text };
-            }
-          } catch {
-            aiVerdict = {
-              error: 'Не удалось распарсить JSON от AI',
-              rawText: text,
-            };
+    const sjtQuestions = questions.filter((q) => q.block === 'A');
+    for (const q of sjtQuestions) {
+      const selectedOptionText = answers[q.id];
+      if (selectedOptionText && q.options) {
+        // Cast JSON to array safely
+        const optionsArr = q.options as any[];
+        if (Array.isArray(optionsArr)) {
+          const option = optionsArr.find((o: any) => o.label === selectedOptionText);
+          if (option && typeof option.weight === 'number') {
+            sjtScore += option.weight;
           }
-        } catch (aiError) {
-          console.error('Gemini API Error:', aiError);
-          aiVerdict = {
-            error: `Ошибка Gemini API: ${aiError instanceof Error ? aiError.message : 'Unknown'}`,
-          };
         }
-      } else {
-        aiVerdict = { error: 'GEMINI_API_KEY не задан на сервере' };
       }
     }
 
-    // ── 5. Save Result ──
-    const finalResult = {
-      id: Date.now().toString(),
-      answers,
-      sjtScore,
-      status,
-      aiAnalysis: aiVerdict,
-    };
+    // ── 2. Format Open Answers ──
+    const openAnswers = questions
+      .filter((q) => q.block === 'B' || q.block === 'C' || q.block === 'D')
+      .map((q) => {
+        const ans = answers[q.id] || 'Нет ответа';
+        return `Вопрос (${q.id}): ${q.text}\nОтвет: ${ans}`;
+      })
+      .join('\n\n');
+
+    // ── 3. Prepare AI Prompt ──
+    const setting = await prisma.setting.findUnique({ where: { key: 'gemini_prompt' } });
     
-    await saveResult(finalResult);
+    const defaultPrompt = `Ты — жесткий и проницательный клинический психолог и образовательный методист. Твоя задача — провести поведенческий анализ ответов родителей (блоки B, C, D) для выявления их реальной позиции в отношении субъектности ребенка.
+Родители склонны давать социально одобряемые ответы. Твоя цель — пробиться сквозь декларации и найти факты прошлого поведения.
+
+ПРАВИЛА ОЦЕНКИ (ОЧЕНЬ СТРОГО):
+Ищи следующие маркеры в текстах ответов:
+1. "МЫ-синдром" (Слияние): Использование местоимения "Мы" в отношении учебы ("мы делали проект", "мы перешли в 5 класс", "мы получили двойку"). Это красный флаг. Оценка = 0.
+2. Спасательство (Низкая толерантность к фрустрации): Родитель сам звонит учителю, делает уроки за ребенка, жалеет его в ущерб правилам, не может выдержать слезы/обиду ребенка. Оценка = 0.
+3. Внешний локус контроля: Перекладывание вины на "слабого педагога", "сложную программу", "плохую компанию". Оценка = 0.
+4. Субъектная позиция (Партнерство): Родитель использует "Я" для своих действий и "Он/Она" для действий ребенка. Родитель описывает, как позволил ребенку столкнуться с последствиями (двойка, несдача). Родитель выдержал конфликт/фрустрацию, не сломав оговоренную рамку. Оценка = 2.
+5. Декларация без действий: Правильные слова ("нужно быть самостоятельным"), но в описании ситуации нет конкретных действий родителя. Оценка = 1.
+
+АНАЛИЗ БЛОКА C (Ответственность):
+Если на Школу или Семью выделено больше процентов, чем на Ребенка — это риск. В субъектной модели Ребенок должен нести >50% ответственности.
+
+ОТВЕТЫ ПОЛЬЗОВАТЕЛЯ:
+{OPEN_ANSWERS}
+
+Выведи результат СТРОГО в формате валидного JSON (без маркдауна, только сырой JSON):
+{
+  "scores": { "B1": 0, "B2": 0, "C1": 0, "D1": 0 },
+  "riskFlags": true,
+  "recommendation": "Один из вариантов: Отказать / Жесткое собеседование / Зачислить с испытательным сроком / Зачислить",
+  "comment": "Твой детальный, циничный и честный анализ паттернов поведения родителя. Укажи, где они врут себе, где сливаются с ребенком, а где реально готовы к партнерству."
+}`;
+
+    const promptTemplate = setting?.value || defaultPrompt;
+    const aiPrompt = promptTemplate.replace('{OPEN_ANSWERS}', openAnswers);
+
+    // ── 4. Call Gemini API ──
+    let aiAnalysis = null;
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-2.5-flash',
+          generationConfig: { responseMimeType: 'application/json' },
+        });
+
+        const result = await model.generateContent(aiPrompt);
+        const responseText = result.response.text();
+        aiAnalysis = JSON.parse(responseText);
+      } catch (err: any) {
+        console.error('Gemini API Error:', err);
+      }
+    }
+
+    // ── 5. Determine Overall Status ──
+    let finalStatus = 'pending';
+    if (aiAnalysis?.riskFlags) {
+      finalStatus = 'rejected';
+    } else if (sjtScore >= 6) {
+      finalStatus = 'approved';
+    }
+
+    // ── 6. Save Result to DB ──
+    const newResult = await prisma.result.create({
+      data: {
+        answers,
+        sjtScore,
+        status: finalStatus,
+        aiAnalysis: aiAnalysis || {},
+      },
+    });
 
     return NextResponse.json({
-      status,
+      success: true,
+      resultId: newResult.id,
+      aiAnalysis,
       sjtScore,
-      aiAnalysis: aiVerdict,
+      status: finalStatus,
     });
-  } catch (error) {
-    console.error('Evaluation Error:', error);
-    return NextResponse.json(
-      { error: 'Внутренняя ошибка сервера' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('Evaluate Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

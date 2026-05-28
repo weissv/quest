@@ -1,10 +1,12 @@
 import React from 'react';
-import { getResults, getQuestions } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { Users, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default async function AdminDashboard() {
-  const results = await getResults();
-  const questions = await getQuestions();
+  const results = await prisma.result.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  const questions = await prisma.question.findMany();
 
   const totalResults = results.length;
   const approvedResults = results.filter((r: any) => r.status && r.status.toLowerCase().includes('прямое зачисление')).length;

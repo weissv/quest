@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, FileText, Database, Users, Network, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Database, Users, Network, LogOut, BrainCircuit } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -15,6 +15,7 @@ export default function Sidebar() {
     { href: '/admin/questions', icon: FileText, label: 'Вопросы (Список)' },
     { href: '/admin/blueprint', icon: Network, label: 'Граф логики (Blueprint)' },
     { href: '/admin/results', icon: Users, label: 'Результаты' },
+    { href: '/admin/prompt', icon: BrainCircuit, label: 'Настройки ИИ' },
   ];
 
   const handleLogout = async () => {

@@ -1,40 +1,45 @@
-import fs from 'fs/promises';
-import path from 'path';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-const QUESTIONS_PATH = path.join(process.cwd(), 'data', 'db', 'questions.json');
-const RESULTS_PATH = path.join(process.cwd(), 'data', 'db', 'results.json');
-
-export async function getQuestions() {
-  try {
-    const data = await fs.readFile(QUESTIONS_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading questions:', error);
-    return [];
+function getDatabaseUrl(url: string | undefined): string | undefined {
+  if (!url) return url;
+  if (url.startsWith('prisma+postgres://')) {
+    try {
+      const parsedUrl = new URL(url);
+      const apiKey = parsedUrl.searchParams.get('api_key');
+      if (apiKey) {
+        const decoded = Buffer.from(apiKey, 'base64').toString('utf-8');
+        const config = JSON.parse(decoded);
+        if (config.databaseUrl) {
+          return config.databaseUrl;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse prisma+postgres URL, using original:', e);
+    }
   }
+  return url;
 }
 
-export async function saveQuestions(questions: any) {
-  await fs.writeFile(QUESTIONS_PATH, JSON.stringify(questions, null, 2), 'utf-8');
-}
+const prismaClientSingleton = () => {
+  const connectionString = getDatabaseUrl(process.env.DATABASE_URL);
+  const pool = new Pool({
+    connectionString,
+  });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({
+    adapter,
+    log: ['error', 'warn'],
+  });
+};
 
-export async function getResults() {
-  try {
-    const data = await fs.readFile(RESULTS_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading results:', error);
-    return [];
-  }
-}
+type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
 
-export async function saveResult(result: any) {
-  const results = await getResults();
-  results.unshift({ ...result, createdAt: new Date().toISOString() }); // Add to beginning
-  await fs.writeFile(RESULTS_PATH, JSON.stringify(results, null, 2), 'utf-8');
-  return result;
-}
+const globalForPrisma = global as unknown as { prisma: PrismaClientSingleton };
 
-export async function saveResults(results: any[]) {
-  await fs.writeFile(RESULTS_PATH, JSON.stringify(results, null, 2), 'utf-8');
+export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }

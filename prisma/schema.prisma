@@ -1,0 +1,32 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Question {
+  id         String  @id
+  block      String
+  type       String
+  text       String
+  options    Json?
+  dependsOn  Json?
+  mirrorText String?
+  position   Json?
+}
+
+model Result {
+  id         String   @id @default(uuid())
+  answers    Json
+  sjtScore   Int
+  status     String
+  aiAnalysis Json?
+  createdAt  DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}
