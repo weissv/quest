@@ -41,18 +41,33 @@ export interface BlockMeta {
 
 // ── API types ───────────────────────────────────
 
+export type PipelineStatus = 'pending' | 'review' | 'interview' | 'approved' | 'rejected';
+
 export interface AIVerdict {
   scores?: Record<string, number>;
   total_score?: number;
   reasoning?: string;
-  status?: string;
+  status?: PipelineStatus | string;
   error?: string;
 }
 
 export interface EvaluationResult {
-  status: string;
+  id: string;
+  answers: Record<string, string>;
   sjtScore: number;
+  status: PipelineStatus | string;
   aiAnalysis: AIVerdict | null;
+  createdAt?: string | Date;
+}
+
+export interface FamilyProfile {
+  code: string;
+  status: PipelineStatus;
+  results: EvaluationResult[];
+  sjtAverage: number;
+  aiAverage: number;
+  totalScore: number;
+  updatedAt: number;
 }
 
 // ── Store types ─────────────────────────────────
