@@ -11,6 +11,7 @@ interface ResultRowProps {
 export default function ResultRow({ result }: ResultRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   const getStatusIcon = (status: string) => {
     if (status.includes('✅')) return <CheckCircle className="w-6 h-6 text-success" />;
@@ -42,6 +43,25 @@ export default function ResultRow({ result }: ResultRowProps) {
       } catch (e) {
         alert('Ошибка при обновлении');
         setUpdating(false);
+      }
+    }
+  };
+
+  const handleReCalculateAI = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Запустить повторный анализ AI для этой анкеты? (Текущий результат будет перезаписан)')) {
+      setRecalculating(true);
+      try {
+        const res = await fetch('/api/re-evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resultId: result.id })
+        });
+        if (!res.ok) throw new Error('Ошибка сети');
+        window.location.reload();
+      } catch (e) {
+        alert('Ошибка при вызове ИИ');
+        setRecalculating(false);
       }
     }
   };
@@ -114,53 +134,60 @@ export default function ResultRow({ result }: ResultRowProps) {
 
         {/* AI Analysis */}
         <div className="bg-surface/95 p-6 h-full border-t border-foreground-tertiary/10 lg:border-l">
-          <div className="flex items-center gap-2 mb-6 text-teal-light">
-            <Cpu className="w-5 h-5" />
-            <h3 className="text-sm font-black uppercase tracking-widest">Анализ AI (Блок B)</h3>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2 text-teal-light">
+              <Cpu className="w-5 h-5" />
+              <h3 className="text-sm font-black uppercase tracking-widest">Анализ AI</h3>
+            </div>
+            <button
+              onClick={handleReCalculateAI}
+              disabled={recalculating}
+              className="px-3 py-1.5 text-xs font-bold bg-teal/10 text-teal-light border border-teal/20 rounded-lg hover:bg-teal/20 transition-colors disabled:opacity-50"
+            >
+              {recalculating ? 'Считаем...' : 'Пересчитать AI'}
+            </button>
           </div>
           
-          {result.aiAnalysis ? (
+          {result.aiAnalysis && Object.keys(result.aiAnalysis).length > 0 ? (
             <div className="space-y-4">
-              {result.aiAnalysis.recommendation && (
-                <div className="glass-card-elevated p-5 border border-success/20">
-                  <p className="text-xs font-bold text-success mb-2 uppercase tracking-wider">Рекомендация</p>
-                  <p className="text-base font-bold text-foreground">{result.aiAnalysis.recommendation}</p>
+              {result.aiAnalysis.status && (
+                <div className={`glass-card-elevated p-5 border ${result.aiAnalysis.status === 'approved' ? 'border-success/20' : 'border-danger/20'}`}>
+                  <p className={`text-xs font-bold mb-2 uppercase tracking-wider ${result.aiAnalysis.status === 'approved' ? 'text-success' : 'text-danger'}`}>
+                    Вердикт ИИ
+                  </p>
+                  <p className="text-base font-bold text-foreground">{result.aiAnalysis.status}</p>
                 </div>
               )}
               
-              {result.aiAnalysis.comment && (
+              {result.aiAnalysis.reasoning && (
                 <div className="bg-surface-raised p-5 rounded-xl border border-foreground-tertiary/10">
-                  <p className="text-xs font-bold text-foreground-tertiary mb-2 uppercase tracking-wider">Комментарий</p>
-                  <p className="text-sm text-foreground-secondary leading-relaxed">{result.aiAnalysis.comment}</p>
+                  <p className="text-xs font-bold text-foreground-tertiary mb-2 uppercase tracking-wider">Психологический анализ</p>
+                  <p className="text-sm text-foreground-secondary leading-relaxed">{result.aiAnalysis.reasoning}</p>
                 </div>
               )}
               
-              {result.aiAnalysis.riskFlags && (
-                <div className="flex items-center gap-2 bg-danger/10 text-danger-light px-4 py-3 rounded-xl border border-danger/20 text-sm font-bold shadow-glow">
-                  <AlertTriangle className="w-5 h-5" />
-                  Обнаружены флаги риска! Требуется внимание психолога.
-                </div>
-              )}
-              
-              {result.aiAnalysis.scores && (
-                 <div className="bg-surface-raised p-5 rounded-xl border border-foreground-tertiary/10">
-                   <p className="text-xs font-bold text-foreground-tertiary mb-3 uppercase tracking-wider">Оценки по параметрам (0-2)</p>
-                   <div className="flex flex-wrap gap-2">
-                      {Object.entries(result.aiAnalysis.scores).map(([k, v]) => (
-                        <span key={k} className="px-3 py-1.5 bg-background-main rounded-lg text-xs font-mono border border-foreground-tertiary/20 text-foreground-secondary flex items-center gap-2">
-                          <span>{k}</span>
-                          <span className="font-bold text-plum-light">{String(v)}</span>
-                        </span>
-                      ))}
-                   </div>
+              <div className="bg-surface-raised p-5 rounded-xl border border-foreground-tertiary/10">
+                 <p className="text-xs font-bold text-foreground-tertiary mb-3 uppercase tracking-wider">Баллы</p>
+                 <div className="flex flex-wrap gap-2 items-center">
+                    {result.aiAnalysis.scores && Object.entries(result.aiAnalysis.scores).map(([k, v]) => (
+                      <span key={k} className="px-3 py-1.5 bg-background-main rounded-lg text-xs font-mono border border-foreground-tertiary/20 text-foreground-secondary flex items-center gap-2">
+                        <span>{k}</span>
+                        <span className="font-bold text-plum-light">{String(v)}</span>
+                      </span>
+                    ))}
+                    {result.aiAnalysis.total_score !== undefined && (
+                      <span className="ml-auto px-4 py-1.5 bg-plum/10 text-plum-light font-bold rounded-lg border border-plum/20">
+                        Total AI Score: {result.aiAnalysis.total_score}
+                      </span>
+                    )}
                  </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[200px] text-foreground-tertiary border-2 border-dashed border-foreground-tertiary/20 rounded-2xl">
               <Cpu className="w-10 h-10 mb-3 opacity-20" />
               <p className="text-sm font-medium">Анализ AI не проводился</p>
-              <p className="text-xs opacity-70">(SJT вне диапазона)</p>
+              <p className="text-xs opacity-70">(или завершился с ошибкой)</p>
             </div>
           )}
         </div>
