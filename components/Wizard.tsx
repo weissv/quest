@@ -42,18 +42,21 @@ export default function Wizard() {
   }, []);
 
   // ── Dynamic question filtering logic ──
-  const getFilteredQuestions = (answers: Record<string, string>, allQuestions: Question[]): Question[] => {
-    const blockAQuestions = allQuestions.filter((q) => q.block === 'A');
-    const isBlockAComplete = blockAQuestions.every((q) => answers[q.id]);
+  const getFilteredQuestions = (answers: Record<string, any>, allQuestions: Question[], currentCohort: string | null): Question[] => {
+    // First, filter by cohort
+    const cohortQuestions = allQuestions.filter(q => !q.cohort || q.cohort === currentCohort);
+    
+    const blockAQuestions = cohortQuestions.filter((q) => q.block === 'A');
+    const isBlockAComplete = blockAQuestions.length > 0 && blockAQuestions.every((q) => answers[q.code || '']);
 
     let skipRest = false;
     if (isBlockAComplete) {
-      if (sjtScore >= 10 || sjtScore <= 4) {
+      if (sjtScore >= 12 || sjtScore <= 6) { // V3 thresholds
         skipRest = true;
       }
     }
 
-    return allQuestions.filter((q) => {
+    return cohortQuestions.filter((q) => {
       if ((q.block === 'B' || q.block === 'C') && skipRest) return false;
 
       if (q.dependsOn) {
@@ -68,11 +71,14 @@ export default function Wizard() {
     });
   };
 
-  const filteredQuestions = getFilteredQuestions(answers, questions);
+  const filteredQuestions = getFilteredQuestions(answers, questions, useFormStore.getState().cohort || null);
   const currentQuestion = filteredQuestions[currentStepIndex];
   const isLastQuestion = currentStepIndex === filteredQuestions.length - 1;
-  const currentAnswer = currentQuestion ? answers[currentQuestion.id] || '' : '';
-  const canProceed = currentAnswer.trim().length > 0;
+  const currentAnswer = currentQuestion ? answers[currentQuestion.code || ''] : undefined;
+  
+  const canProceed = currentAnswer !== undefined && currentAnswer !== null && 
+    (typeof currentAnswer === 'number' || (typeof currentAnswer === 'string' && currentAnswer.trim().length > 0) || Array.isArray(currentAnswer));
+    
   const progress = filteredQuestions.length > 0 ? Math.round(
     ((currentStepIndex + 1) / filteredQuestions.length) * 100
   ) : 0;
@@ -83,11 +89,12 @@ export default function Wizard() {
     ? prevQuestion.block !== currentQuestion?.block
     : true;
 
-  const handleAnswer = (questionId: string, val: string) => {
-    setAnswer(questionId, val);
+  const handleAnswer = (questionCode: string, val: any) => {
+    setAnswer(questionCode, val);
 
     // Auto-advance for radio buttons
-    if (currentQuestion.type === 'radio' && !isLastQuestion) {
+    const isRadio = currentQuestion.type === 'radio' || currentQuestion.type === 'SELECT' || currentQuestion.type === 'SJT';
+    if (isRadio && !isLastQuestion) {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = setTimeout(() => {
         nextStep();
@@ -121,14 +128,14 @@ export default function Wizard() {
   return (
     <div className="glass-card-elevated p-6 md:p-10">
       <ProgressBar
-        currentBlock={currentQuestion.block}
+        currentBlock={currentQuestion.block as import('@/types').BlockType}
         progress={progress}
         currentStep={currentStepIndex + 1}
         totalSteps={filteredQuestions.length}
       />
 
       {isNewBlock && (
-        <BlockHeader block={currentQuestion.block} showTransition />
+        <BlockHeader block={currentQuestion.block as import('@/types').BlockType} showTransition />
       )}
 
       <div className="h-px bg-gradient-to-r from-transparent via-foreground-tertiary/20 to-transparent mb-8" />

@@ -66,15 +66,15 @@ export default function FamilyDrawer({ family, onClose }: FamilyDrawerProps) {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Ср. SJT балл</p>
-              <p className="text-3xl font-black text-white/90">{family.sjtAverage.toFixed(1)} <span className="text-lg text-white/30 font-medium">/ 12</span></p>
+              <p className="text-3xl font-black text-white/90">{family.sjtAverage.toFixed(1)}</p>
             </div>
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Ср. AI балл</p>
-              <p className="text-3xl font-black text-white/90">{family.aiAverage.toFixed(1)} <span className="text-lg text-white/30 font-medium">/ 6</span></p>
+              <p className="text-3xl font-black text-white/90">{family.aiAverage.toFixed(1)}</p>
             </div>
             <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-5">
               <p className="text-[10px] font-bold text-violet-400/60 uppercase tracking-wider mb-1">Итоговый рейтинг</p>
-              <p className="text-3xl font-black text-violet-400">{family.totalScore.toFixed(1)} <span className="text-lg text-violet-400/40 font-medium">/ 18</span></p>
+              <p className="text-3xl font-black text-violet-400">{family.totalScore.toFixed(1)}</p>
             </div>
           </div>
 
@@ -108,8 +108,10 @@ export default function FamilyDrawer({ family, onClose }: FamilyDrawerProps) {
             
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden">
               {sortedKeys.map((key, idx) => {
-                const valA = resultA?.answers[key] || '—';
-                const valB = resultB?.answers[key] || '—';
+                const rawA = resultA?.answers[key];
+                const rawB = resultB?.answers[key];
+                const valA = rawA !== undefined ? (typeof rawA === 'object' ? JSON.stringify(rawA) : rawA) : '—';
+                const valB = rawB !== undefined ? (typeof rawB === 'object' ? JSON.stringify(rawB) : rawB) : '—';
                 
                 return (
                   <div key={key} className={`flex flex-col md:flex-row border-b border-white/[0.05] last:border-b-0 ${idx % 2 === 0 ? 'bg-black/20' : ''}`}>
@@ -170,9 +172,10 @@ function AIResultPanel({ result, label }: { result: EvaluationResult; label: str
 }
 
 function ResponsibilityChart({ result, label }: { result: EvaluationResult; label: string }) {
-  const family = parseInt(result.answers['C1'] || '0', 10);
-  const school = parseInt(result.answers['C2'] || '0', 10);
-  const child = parseInt(result.answers['C3'] || '0', 10);
+  const c1 = Array.isArray(result.answers['C1']) ? result.answers['C1'] : [0, 0, 0];
+  const school = parseInt(c1[0] || '0', 10);
+  const family = parseInt(c1[1] || '0', 10);
+  const child = parseInt(c1[2] || '0', 10);
 
   const total = family + school + child;
   if (total === 0) {

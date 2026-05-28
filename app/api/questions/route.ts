@@ -6,7 +6,9 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const questions = await prisma.question.findMany();
+    const questions = await prisma.question.findMany({
+      orderBy: { createdAt: 'asc' }
+    });
     return NextResponse.json(questions);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to load questions' }, { status: 500 });
@@ -21,7 +23,7 @@ export async function PUT(request: Request) {
     }
 
     const validQuestions = questions.filter((q: any) => 
-      q && typeof q.id === 'string' && typeof q.block === 'string' && typeof q.type === 'string' && typeof q.text === 'string'
+      q && typeof q.block === 'string' && typeof q.type === 'string' && typeof q.text === 'string'
     );
 
     if (validQuestions.length === 0 && questions.length > 0) {
@@ -32,7 +34,9 @@ export async function PUT(request: Request) {
       prisma.question.deleteMany(),
       prisma.question.createMany({
         data: validQuestions.map((q: any) => ({
-          id: q.id,
+          id: q.id || undefined,
+          code: q.code || null,
+          cohort: q.cohort || null,
           block: q.block,
           type: q.type,
           text: q.text,

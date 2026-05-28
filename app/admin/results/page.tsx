@@ -18,7 +18,8 @@ function normalizeStatus(raw: string | null | undefined): PipelineStatus {
 }
 
 function aggregateFamily(results: EvaluationResult[]): FamilyProfile {
-  const code = results[0].answers['0.1'] || '—';
+  // Try to get family code from the result field, or fallback to answers['0.1']
+  const code = (results[0] as any).familyCode || results[0].answers['0.1'] || 'Без кода';
   
   // Average SJT
   const sjtSum = results.reduce((acc, r) => acc + (r.sjtScore || 0), 0);
@@ -35,14 +36,10 @@ function aggregateFamily(results: EvaluationResult[]): FamilyProfile {
   });
   const aiAverage = aiCount > 0 ? aiSum / aiCount : 0;
 
-  // Total Score
+  // Total Score (now tracked in DB, but we recalculate average here if needed)
   const totalScore = sjtAverage + aiAverage;
 
-  // Family Status: 
-  // If any result is rejected -> rejected
-  // If any is interview -> interview
-  // If any is review -> review
-  // Else pending or approved based on majority
+  // Family Status
   let status: PipelineStatus = 'pending';
   const statuses = results.map(r => normalizeStatus(r.status));
   
@@ -80,7 +77,7 @@ export default function ResultsPage() {
       // Group by family code
       const map: Record<string, EvaluationResult[]> = {};
       data.forEach(r => {
-        const code = r.answers?.['0.1'] || 'Без кода';
+        const code = (r as any).familyCode || r.answers?.['0.1'] || 'Без кода';
         if (!map[code]) map[code] = [];
         map[code].push(r);
       });

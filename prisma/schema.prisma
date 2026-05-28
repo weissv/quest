@@ -8,24 +8,57 @@ generator client {
   engineType = "library"
 }
 
+enum CohortType {
+  GRADE_1_4
+  GRADE_5_8
+}
+
+enum ParentRole {
+  MAMA
+  PAPA
+  OTHER
+}
+
+enum EvaluationStatus {
+  APPROVED
+  REJECTED
+  GREY_ZONE
+  PENDING
+  REVIEW
+  INTERVIEW
+}
+
 model Question {
-  id         String  @id
+  id         String      @id @default(uuid())
+  code       String?     @unique
   block      String
+  cohort     CohortType?
   type       String
   text       String
   options    Json?
   dependsOn  Json?
   mirrorText String?
   position   Json?
+  createdAt  DateTime    @default(now())
 }
 
 model Result {
-  id         String   @id @default(uuid())
-  answers    Json
-  sjtScore   Int
-  status     String
-  aiAnalysis Json?
-  createdAt  DateTime @default(now())
+  id          String            @id @default(uuid())
+  familyCode  String?
+  parentRole  ParentRole?
+  cohort      CohortType?
+  answers     Json
+  sjtScore    Float             @default(0)
+  aiScore     Float?
+  totalScore  Float             @default(0)
+  status      String
+  evalStatus  EvaluationStatus?
+  aiAnalysis  Json?
+  aiReasoning String?
+  dyadMetrics Json?
+  createdAt   DateTime          @default(now())
+
+  @@index([familyCode])
 }
 
 model Setting {

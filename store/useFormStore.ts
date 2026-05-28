@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { FormState, EvaluationResult, ParentRole, Question } from '@/types';
+import { FormState, EvaluationResult, ParentRole, CohortType, Question } from '@/types';
 
 // Extend FormState to include questions
 interface ExtendedFormState extends FormState {
@@ -15,6 +15,7 @@ export const useFormStore = create<ExtendedFormState>((set, get) => ({
   currentStepIndex: 0,
   sjtScore: 0,
   parentRole: null,
+  cohort: null,
   isSubmitting: false,
   submissionResult: null,
   error: null,
@@ -30,29 +31,42 @@ export const useFormStore = create<ExtendedFormState>((set, get) => ({
     }
   },
 
-  setAnswer: (questionId, answer) => {
-    const newAnswers = { ...get().answers, [questionId]: answer };
+  setCohort: (cohort: CohortType) => set((state) => ({
+    cohort,
+    answers: Object.keys(state.answers)
+      .filter(key => !key.startsWith('A')) // Clear old SJT answers when cohort changes
+      .reduce((obj, key) => ({ ...obj, [key]: state.answers[key] }), {})
+  })),
+
+  setAnswer: (questionCode, answer) => {
+    const newAnswers = { ...get().answers, [questionCode]: answer };
     const questions = get().questions;
 
     // Recalculate SJT score on every Block A answer change
     let sjtScore = 0;
     questions.forEach((q) => {
       if (q.block === 'A' && q.options) {
-        const selected = q.options.find((opt) => opt.label === newAnswers[q.id]);
-        if (selected && typeof selected.weight === 'number') {
-          sjtScore += selected.weight;
+        const selectedIndex = newAnswers[q.code || ''];
+        if (typeof selectedIndex === 'number' && Array.isArray(q.options)) {
+          const opt = q.options[selectedIndex] as any;
+          if (opt && typeof opt.weight === 'number') {
+            sjtScore += opt.weight;
+          }
         }
       }
     });
 
-    // Track parent role for conditional routing
-    const parentRole =
-      questionId === '0.4' ? (answer as ParentRole) : get().parentRole;
+    let parentRole = get().parentRole;
+    let cohort = get().cohort;
+
+    if (questionCode === '0.2') cohort = answer as CohortType;
+    if (questionCode === '0.3') parentRole = answer as ParentRole;
 
     set({
       answers: newAnswers,
       sjtScore,
       parentRole,
+      cohort
     });
   },
 
@@ -72,6 +86,7 @@ export const useFormStore = create<ExtendedFormState>((set, get) => ({
       currentStepIndex: 0,
       sjtScore: 0,
       parentRole: null,
+      cohort: null,
       isSubmitting: false,
       submissionResult: null,
       error: null,
@@ -80,18 +95,24 @@ export const useFormStore = create<ExtendedFormState>((set, get) => ({
   submitAnswers: async () => {
     set({ isSubmitting: true, error: null });
     try {
+      const state = get();
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: get().answers }),
+        body: JSON.stringify({ 
+          familyCode: state.answers['0.1'],
+          parentRole: state.parentRole,
+          cohort: state.cohort,
+          answers: state.answers 
+        }),
       });
 
       if (!res.ok) {
         throw new Error(`Server error: ${res.status}`);
       }
 
-      const data: EvaluationResult = await res.json();
-      set({ submissionResult: data, isSubmitting: false });
+      const data = await res.json();
+      set({ submissionResult: data.result as EvaluationResult, isSubmitting: false });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Ошибка при отправке';

@@ -17,6 +17,11 @@ export default function QuestionCard({
   currentAnswer,
   onAnswer,
 }: QuestionCardProps) {
+  const code = question.code || question.id;
+  const isText = question.type === 'text' || question.type === 'TEXT' || question.type === 'OPEN';
+  const isRadio = question.type === 'radio' || question.type === 'SELECT' || question.type === 'SJT';
+  const isMatrix = question.type === 'sliders' || question.type === 'MATRIX';
+
   return (
     <div className="animate-slide-up">
       {/* Question text */}
@@ -25,40 +30,51 @@ export default function QuestionCard({
       </h3>
 
       {/* Text input */}
-      {question.type === 'text' && (
+      {isText && (
         <TextInput
           value={currentAnswer}
-          onChange={(val) => onAnswer(question.id, val)}
+          onChange={(val) => onAnswer(code, val)}
           placeholder={
-            question.id === '0.1'
+            code === '0.1'
               ? 'Введите семейный код...'
               : 'Ваш развёрнутый ответ...'
           }
-          maxLength={question.id === '0.1' ? 50 : 2000}
+          maxLength={code === '0.1' ? 50 : 2000}
         />
       )}
 
       {/* Radio options */}
-      {question.type === 'radio' && question.options && (
+      {isRadio && question.options && Array.isArray(question.options) && (
         <div className="flex flex-col gap-3">
-          {question.options.map((option, idx) => (
-            <RadioOption
-              key={idx}
-              option={option}
-              name={question.id}
-              isSelected={currentAnswer === option.label}
-              index={idx}
-              onSelect={(val) => onAnswer(question.id, val)}
-            />
-          ))}
+          {question.options.map((option: any, idx: number) => {
+            const label = typeof option === 'string' ? option : option.label;
+            const value = typeof option === 'string' ? option : option.value || label;
+            
+            // In v3, we save the index for SJT questions instead of label, but for SELECT we might want value.
+            // Let's modify the radio option to use index if it's SJT or value if SELECT, but useFormStore
+            // SJT scoring expects the index in the answers object.
+            const isSJT = question.type === 'SJT';
+            const answerValue = isSJT ? idx : value;
+            
+            return (
+              <RadioOption
+                key={idx}
+                option={option}
+                name={code}
+                isSelected={currentAnswer === answerValue}
+                index={idx}
+                onSelect={() => onAnswer(code, answerValue)}
+              />
+            );
+          })}
         </div>
       )}
 
       {/* Sliders Matrix */}
-      {question.type === 'sliders' && (
+      {isMatrix && (
         <SlidersMatrix
           value={currentAnswer}
-          onChange={(val) => onAnswer(question.id, val)}
+          onChange={(val) => onAnswer(code, val)}
         />
       )}
     </div>

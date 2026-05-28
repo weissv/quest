@@ -1,36 +1,14 @@
 /* ──────────────────────────────────────────────
- *  Type definitions for the Survey Funnel V2.0
+ *  Type definitions for the Survey Funnel V3.0
  * ────────────────────────────────────────────── */
 
-// ── Question types ──────────────────────────────
+export type CohortType = 'GRADE_1_4' | 'GRADE_5_8';
+export type ParentRole = 'MAMA' | 'PAPA' | 'OTHER';
+export type EvaluationStatus = 'APPROVED' | 'REJECTED' | 'GREY_ZONE' | 'PENDING' | 'REVIEW' | 'INTERVIEW';
+export type PipelineStatus = 'pending' | 'review' | 'interview' | 'approved' | 'rejected';
 
-export type QuestionType = 'text' | 'radio' | 'sliders';
+export type QuestionType = 'TEXT' | 'SELECT' | 'SJT' | 'OPEN' | 'MATRIX';
 export type BlockType = '0' | 'A' | 'B' | 'C' | 'D';
-
-export interface Option {
-  label: string;
-  /** SJT weight for Block A options (0 | 1 | 2) */
-  weight?: number;
-}
-
-export interface Question {
-  id: string;
-  block: BlockType;
-  type: QuestionType;
-  text: string;
-  options?: Option[];
-  /** Role-based dependency — show this question only when parent question matches */
-  dependsOn?: {
-    questionId: string;
-    value: string | string[];
-  };
-  /** Alternative text for the mirror version (Block C — opposite parent) */
-  mirrorText?: string;
-  /** Position for the visual Blueprint editor */
-  position?: { x: number; y: number };
-}
-
-// ── Block metadata ──────────────────────────────
 
 export interface BlockMeta {
   id: BlockType;
@@ -39,9 +17,26 @@ export interface BlockMeta {
   icon: string;
 }
 
-// ── API types ───────────────────────────────────
+export interface Option {
+  label: string;
+  weight?: number;
+  value?: string;
+}
 
-export type PipelineStatus = 'pending' | 'review' | 'interview' | 'approved' | 'rejected';
+export interface Question {
+  id: string;
+  code?: string;
+  cohort?: CohortType | null;
+  block: string;
+  type: QuestionType | string;
+  text: string;
+  options?: Option[] | string[];
+  dependsOn?: any;
+  mirrorText?: string;
+  position?: any;
+}
+
+// ── API types ───────────────────────────────────
 
 export interface AIVerdict {
   scores?: Record<string, number>;
@@ -49,15 +44,17 @@ export interface AIVerdict {
   reasoning?: string;
   status?: PipelineStatus | string;
   error?: string;
+  matrix_anomaly?: boolean;
 }
 
 export interface EvaluationResult {
   id: string;
-  answers: Record<string, string>;
+  answers: Record<string, any>;
   sjtScore: number;
   status: PipelineStatus | string;
   aiAnalysis: AIVerdict | null;
   createdAt?: string | Date;
+  dyadMetrics?: any;
 }
 
 export interface FamilyProfile {
@@ -72,19 +69,19 @@ export interface FamilyProfile {
 
 // ── Store types ─────────────────────────────────
 
-export type ParentRole = 'Куратор рутины' | 'Держатель рамки' | 'Равный участник' | null;
-
 export interface FormState {
-  answers: Record<string, string>;
+  answers: Record<string, any>;
   currentStepIndex: number;
   sjtScore: number;
-  parentRole: ParentRole;
+  parentRole: ParentRole | null;
+  cohort: CohortType | null;
   isSubmitting: boolean;
   submissionResult: EvaluationResult | null;
   error: string | null;
 
   // Actions
-  setAnswer: (questionId: string, answer: string) => void;
+  setCohort: (cohort: CohortType) => void;
+  setAnswer: (questionId: string, answer: any) => void;
   nextStep: () => void;
   prevStep: () => void;
   reset: () => void;

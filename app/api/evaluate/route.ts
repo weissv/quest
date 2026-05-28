@@ -1,156 +1,212 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@/lib/db';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Use standard model based on user settings earlier (e.g., gemini-1.5-pro or standard text model)
+const AI_MODEL = 'gemini-1.5-pro-latest';
 
 export async function POST(req: Request) {
   try {
-    const { answers } = await req.json();
+    const body = await req.json();
+    const { familyCode, parentRole, cohort, answers } = body;
 
-    if (!answers || typeof answers !== 'object') {
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
-    }
+    // 1. Извлекаем все вопросы данной когорты из БД для валидации весов
+    const dbQuestions = await prisma.question.findMany({
+      where: {
+        OR: [
+          { cohort: cohort },
+          { cohort: null }
+        ]
+      }
+    });
 
-    const questions = await prisma.question.findMany();
-
-    // ── 1. Calculate SJT Score (Block A) ──
+    // 2. Рассчитываем SJT Score
     let sjtScore = 0;
-    const sjtQuestions = questions.filter((q) => q.block === 'A');
-    for (const q of sjtQuestions) {
-      const selectedOptionText = answers[q.id];
-      if (selectedOptionText && q.options) {
-        // Cast JSON to array safely
-        const optionsArr = q.options as any[];
-        if (Array.isArray(optionsArr)) {
-          const option = optionsArr.find((o: any) => o.label === selectedOptionText);
-          if (option && typeof option.weight === 'number') {
-            sjtScore += option.weight;
-          }
-        }
-      }
-    }
-
-    // ── 2. Format Open Answers ──
-    const openAnswers = questions
-      .filter((q) => q.block === 'B' || q.block === 'C' || q.block === 'D')
-      .map((q) => {
-        const ans = answers[q.id] || 'Нет ответа';
-        return `Вопрос (${q.id}): ${q.text}\nОтвет: ${ans}`;
-      })
-      .join('\n\n');
-
-    // ── 3. Prepare AI Prompt ──
-    const setting = await prisma.setting.findUnique({ where: { key: 'gemini_prompt' } });
+    const sjtQuestions = dbQuestions.filter((q: any) => q.type === 'SJT');
     
-    const defaultPrompt = `Ты — опытный клинический психолог, эксперт по семейной системной терапии и профайлер частной прогрессивной школы "Mezon". 
-Школа базируется на жестком партнерстве «учитель — родитель — ребенок», развитии субъектности и ответственности. 
+    for (const question of sjtQuestions) {
+      const selectedIndex = answers[question.code || ''];
+      if (selectedIndex !== undefined && question.options) {
+        const options = question.options as Array<{ weight: number }>;
+        sjtScore += options[selectedIndex]?.weight || 0;
+      }
+    }
 
-Твоя задача — глубоко проанализировать текстовые ответы родителя (Блок B) и распределение ответственности (Блок C), чтобы выявить скрытые психологические паттерны. Мы ищем маркеры "Спасательства" (гиперопека), "Потребительства" (школа нам должна) и внешнего локуса контроля. Нам нужны только осознанные родители-партнеры.
-
-ПРАВИЛА ОЦЕНКИ КАЖДОГО ОТВЕТА (от 0 до 2 баллов):
-
-[0 БАЛЛОВ] — КРАСНЫЙ ФЛАГ (Токсичный паттерн)
-- Слияние: Использование местоимения "Мы" вместо "Он/Она" ("мы делаем уроки", "мы перешли в 5 класс").
-- Спасательство / Низкая толерантность к фрустрации: Родитель не выдерживает негативных эмоций ребенка, уступает, делает работу за него, спасает от последствий (двойки, выговора).
-- Внешний локус: Перекладывание вины на учителей, "систему", других детей. 
-- Потребительская позиция: Ожидание, что школа должна развлекать, обеспечивать 100% комфорт без усилий со стороны семьи.
-
-[1 БАЛЛ] — ЖЕЛТЫЙ ФЛАГ (Декларация без действий / Неопределенность)
-- Правильные, социально-одобряемые слова ("нужно быть самостоятельным"), но в тексте нет описания КОНКРЕТНЫХ действий родителя. 
-- Общие фразы, уход от прямого ответа.
-
-[2 БАЛЛА] — ЗЕЛЕНЫЙ ФЛАГ (Субъектность)
-- Разделение ответственности: Родитель использует "Я" для своих действий и "Он" для действий ребенка.
-- Выдерживание фрустрации: Родитель спокойно перенес конфликт, истерику или слезы, не сломав оговоренные правила (границы).
-- Естественные последствия: Родитель позволил ребенку ошибиться, получить низкий балл или столкнуться с отказом, чтобы тот получил опыт.
-
-АНАЛИЗ БЛОКА C (Ответственность):
-Взгляни на распределение %. В норме для школьника средних классов ответственность ребенка должна быть существенной (обычно ≥ 40-50%). Если родитель отдал Школе неадекватно много (например, >50%), это маркер потребительского отношения. Если Семье >60% — гиперопека. Если Ребенку отведено менее 30% — это жесткий триггер инфантилизации. Используй это для корректировки финального вывода.
-
-ОТВЕТЫ ПОЛЬЗОВАТЕЛЯ:
-{OPEN_ANSWERS}
-
-ФОРМАТ ОТВЕТА:
-Ты обязан вернуть результат СТРОГО в формате валидного JSON (без markdown-разметки, без комментариев). 
-Схема JSON:
-{
-  "scores": {
-    "B1": 0,
-    "B2": 0,
-    "B3": 0
-  },
-  "total_score": 0,
-  "reasoning": "Здесь напиши краткий, безжалостный и профессиональный психологический анализ...",
-  "status": "approved или rejected"
-}`;
-
-    const promptTemplate = setting?.value || defaultPrompt;
-    const aiPrompt = promptTemplate.replace('{OPEN_ANSWERS}', openAnswers);
-
-    // ── 4. Call Gemini API ──
-    let aiAnalysis = null;
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({
-          model: 'gemma-4-31b-it',
-          generationConfig: { responseMimeType: 'application/json' },
-        });
-
-        const result = await model.generateContent(aiPrompt);
-        let responseText = result.response.text();
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          aiAnalysis = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found in response: ' + responseText);
+    // 3. Быстрая маршрутизация (Edge Cases)
+    if (sjtScore >= 12) {
+      const result = await prisma.result.create({
+        data: {
+          familyCode, 
+          parentRole, 
+          cohort, 
+          answers, 
+          sjtScore,
+          totalScore: sjtScore, 
+          status: 'APPROVED', 
+          aiReasoning: 'Автоматический проход по результатам SJT-ядра (высокая субъектность/комплаенс).'
         }
-      } catch (err: any) {
-        console.error('Gemini API Error:', err);
-      }
+      });
+      return NextResponse.json({ status: 'APPROVED', result });
     }
 
-    // ── 5. Determine Overall Status ──
-    let finalStatus = 'pending';
-    if (sjtScore <= 4) {
-      finalStatus = 'rejected';
-    } else if (sjtScore >= 10) {
-      finalStatus = 'approved';
-    } else if (aiAnalysis) {
-      const totalScore = sjtScore + (aiAnalysis.total_score || 0);
-      if (totalScore >= 11) {
-        finalStatus = 'approved';
-      } else {
-        finalStatus = 'rejected';
-      }
-      
-      // Explicit override from AI reasoning if it flagged severe issues
-      if (aiAnalysis.status === 'rejected') {
-        finalStatus = 'rejected';
-      }
+    if (sjtScore <= 6) { // Auto-reject threshold adjusted to <= 6 as per blueprint
+      const result = await prisma.result.create({
+        data: {
+          familyCode, 
+          parentRole, 
+          cohort, 
+          answers, 
+          sjtScore,
+          totalScore: sjtScore, 
+          status: 'REJECTED', 
+          aiReasoning: 'Автоматический отказ. Критически низкий уровень базового комплаенса и партнерства.'
+        }
+      });
+      return NextResponse.json({ status: 'REJECTED', result });
     }
 
-    // ── 6. Save Result to DB ──
-    const newResult = await prisma.result.create({
+    // 4. СЕРАЯ ЗОНА: Вызов ИИ Оценщика (Блок B + C)
+    const aiEvaluation = await runAIEvaluator(dbQuestions, answers, sjtScore);
+    
+    // 5. Кросс-анализ диады
+    const finalDyadMetrics = await analyzeFamilyDyad(familyCode, parentRole, answers, sjtScore);
+
+    const totalScore = sjtScore + (aiEvaluation.total_score || 0);
+    // Decision logic based on total score (13.5) or if matrix anomaly flag is true
+    let finalStatus = totalScore >= 13.5 ? 'APPROVED' : 'REJECTED';
+    
+    // If dyad analysis finds conflict, we route to INTERVIEW/REVIEW instead of auto-approve/reject
+    if (finalDyadMetrics.roleConflict && finalStatus === 'APPROVED') {
+      finalStatus = 'INTERVIEW';
+    } else if (finalStatus === 'REJECTED' && totalScore >= 12) {
+      finalStatus = 'REVIEW';
+    }
+
+    const result = await prisma.result.create({
       data: {
+        familyCode,
+        parentRole,
+        cohort,
         answers,
         sjtScore,
+        aiScore: aiEvaluation.total_score,
+        totalScore: totalScore,
         status: finalStatus,
-        aiAnalysis: aiAnalysis || {},
-      },
+        aiAnalysis: aiEvaluation,
+        aiReasoning: aiEvaluation.reasoning,
+        dyadMetrics: finalDyadMetrics
+      }
     });
 
-    return NextResponse.json({
-      success: true,
-      resultId: newResult.id,
-      aiAnalysis,
-      sjtScore,
-      status: finalStatus,
-    });
+    return NextResponse.json({ status: finalStatus, result });
+
   } catch (error: any) {
-    console.error('Evaluate Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Evaluate API Error:', error);
+    return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });
+  }
+}
+
+async function analyzeFamilyDyad(familyCode: string, currentRole: string, currentAnswers: any, currentSjt: number) {
+  if (!familyCode) return { status: "No family code provided", roleConflict: false, mismatchDelta: 0 };
+
+  const partnerRole = currentRole === 'MAMA' ? 'PAPA' : 'MAMA';
+  const partnerResult = await prisma.result.findFirst({
+    where: { familyCode, parentRole: partnerRole as any },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  if (!partnerResult) {
+    return { status: "Awaiting partner submission", roleConflict: false, mismatchDelta: 0 };
+  }
+
+  // Считаем дельту базовых SJT баллов
+  const delta = Math.abs(currentSjt - partnerResult.sjtScore);
+  
+  // Проверяем жесткий конфликт матрицы ответственности (Блок C)
+  const c1Current = currentAnswers['C1'] || [0,0,0];
+  const c1Partner = typeof partnerResult.answers === 'object' && partnerResult.answers !== null ? (partnerResult.answers as any)['C1'] : null;
+  const partnerMatrix = c1Partner || [0,0,0];
+  
+  // Assuming matrix answers are arrays of [School, Family, Child]
+  const currentFamily = parseInt(c1Current[1] || '0', 10);
+  const currentChild = parseInt(c1Current[2] || '0', 10);
+  
+  const partnerFamily = parseInt(partnerMatrix[1] || '0', 10);
+  const partnerChild = parseInt(partnerMatrix[2] || '0', 10);
+
+  const familyDelta = Math.abs(currentFamily - partnerFamily);
+  const childDelta = Math.abs(currentChild - partnerChild);
+  
+  const hasRoleConflict = delta > 4 || familyDelta > 25 || childDelta > 25;
+
+  return {
+    status: "Dyad Fully Analyzed",
+    mismatchDelta: delta,
+    roleConflict: hasRoleConflict,
+    metrics: { familyDelta, childDelta }
+  };
+}
+
+async function runAIEvaluator(questions: any[], answers: any, sjtScore: number) {
+  const openQuestionsData = questions
+    .filter((q: any) => q.type === 'OPEN' || q.type === 'MATRIX')
+    .map((q: any) => `КОД: ${q.code}\nВОПРОС: ${q.text}\nОТВЕТ РОДИТЕЛЯ: ${JSON.stringify(answers[q.code || ''])}`)
+    .join('\n\n');
+
+  const systemInstruction = `
+Ты — ведущий системный семейный психолог, эксперт по трансактному анализу и профайлер элитной STEAM-школы "Mezon Inspiring School" (Ташкент). Наша школа строит жесткое развивающее партнерство. Нам не нужны клиенты-потребители, ожидающие образовательных услуг "под ключ", и нам не нужны родители-спасатели, инвалидизирующие детей гиперопекой. Нам нужны союзники, способные выдерживать фрустрацию ребенка и соблюдать границы института.
+
+Твоя задача — провести глубокий лингвистический, психологический и культурологический анализ ответов родителя из "серой зоны" (его базовый SJT балл: ${sjtScore} из 16).
+
+КРИТЕРИИ КРАСНЫХ ФЛАГОВ (Оценка 0 за вопрос):
+1. Психологическое слияние: Упорное использование местоимения "Мы" при описании учебных действий подростка ("мы пишем проекты", "мы получили тройку", "мы переходим"). Это маркер удушающей гиперопеки.
+2. Непереносимость фрустрации: Родитель при малейшем плаче или протесте ребенка сдается, отменяет правила, бежит спасать, делает за него, покупает подарки, чтобы "загладить вину".
+3. Токсичное потребительство: Позиция "я плачу деньги — школа обязана подстраиваться под мой комфорт/настроение/пробки". Обесценивание школьных стандартов оформления и дедлайнов.
+4. Внешний локус контроля: Виновата программа, репетитор, учитель, погода, "подростковый возраст", но не семейная система и не сам ребенок.
+
+КРИТЕРИИ ЗЕЛЕНЫХ ФЛАГОВ (Оценка 2 за вопрос):
+1. Субъектность: Четкое разделение ответственности. Родитель пишет "Я принял решение", "Ребенок столкнулся с последствиями", "Ему было тяжело, но он справился сам".
+2. Выдерживание границ: Способность родителя спокойно выдержать детский саботаж, слезы, крики, не ломая оговоренное правило или школьный регламент.
+3. Доверие системе (Лояльность): Осознанное делегирование школе экспертной роли без попыток учить учителей, как вести уроки.
+
+АНАЛИЗ МАТРИЦЫ ОТВЕТСТВЕННОСТИ (Код C1):
+Изучи распределение процентов. Если на долю ребенка выделено менее 35% ответственности — это триггер будущей инфантилизации. Если на долю Школы выделено > 50% — это скрытое потребительство.
+
+Ты обязан вернуть ответ СТРОГО в формате JSON. Никакого markdown-оформления, никаких трипл-бэктиков. Только чистый сериализуемый объект:
+{
+  "scores": {
+    "B1": <0, 1, или 2>,
+    "B2": <0, 1, или 2>
+  },
+  "matrix_anomaly": <boolean: true если проценты в C1 инфантильные или потребительские>,
+  "total_score": <сумма баллов за открытые вопросы>,
+  "reasoning": "<Краткий, хирургически точный психологический портрет родителя. Максимум 350 символов. Без общих фраз. Укажи конкретные маркеры: слияние, потребительство или, наоборот, высокий уровень партнерства.>"
+}
+`;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: AI_MODEL,
+      systemInstruction,
+      generationConfig: {
+        responseMimeType: "application/json",
+      }
+    });
+
+    const response = await model.generateContent(openQuestionsData);
+    const text = response.response.text();
+    // Use regex to strip out any potential markdown wrapping just in case
+    const cleanJson = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+    return JSON.parse(cleanJson);
+  } catch (err: any) {
+    console.error('Gemini API Error:', err);
+    return {
+      scores: {},
+      total_score: 0,
+      matrix_anomaly: false,
+      reasoning: 'Ошибка ИИ-оценки. Требуется ручная модерация.'
+    };
   }
 }

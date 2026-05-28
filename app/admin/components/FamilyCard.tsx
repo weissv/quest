@@ -67,11 +67,11 @@ export default function FamilyCard({ family, onClick }: FamilyCardProps) {
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-white/40">SJT ср. балл:</span>
-          <span className="font-mono text-white/80">{sjtAverage.toFixed(1)} / 12</span>
+          <span className="font-mono text-white/80">{sjtAverage.toFixed(1)}</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-white/40">AI ср. балл:</span>
-          <span className="font-mono text-white/80">{aiAverage.toFixed(1)} / 6</span>
+          <span className="font-mono text-white/80">{aiAverage.toFixed(1)}</span>
         </div>
         
         <div className="h-px bg-white/[0.06] my-1" />
