@@ -9,6 +9,8 @@ lerna-debug.log*
 .next/
 build/
 dist/
+database_dump.md
+database_export.md
 
 # Переменные окружения (секреты)
 .env

@@ -101,9 +101,12 @@ export async function POST(req: Request) {
 
         const result = await model.generateContent(aiPrompt);
         let responseText = result.response.text();
-        // Clean markdown wrapper from LLM response if present
-        responseText = responseText.replace(/```json\n?|```\n?/g, '').trim();
-        aiAnalysis = JSON.parse(responseText);
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          aiAnalysis = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in response: ' + responseText);
+        }
       } catch (err: any) {
         console.error('Gemini API Error:', err);
       }
