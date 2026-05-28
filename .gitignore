@@ -18,3 +18,4 @@ dist/
 .env.production.local
 
 /lib/generated/prisma
+deploy_result*.json
