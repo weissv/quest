@@ -9,8 +9,8 @@ export function middleware(request: NextRequest) {
 
   // Protect /api routes
   if (pathname.startsWith('/api')) {
-    // Allow public access to evaluate (POST) and questions (GET)
-    if (pathname === '/api/evaluate' || (request.method === 'GET' && pathname === '/api/questions')) {
+    // Allow public access to auth, evaluate (POST), and questions (GET)
+    if (pathname.startsWith('/api/auth/') || pathname === '/api/evaluate' || (request.method === 'GET' && pathname === '/api/questions')) {
       return NextResponse.next();
     }
 
