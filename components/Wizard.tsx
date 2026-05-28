@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useFormStore } from '@/store/useFormStore';
-import { getFilteredQuestions } from '@/data/questions';
+import { Question } from '@/types';
 import ProgressBar from './ProgressBar';
 import BlockHeader from './BlockHeader';
 import QuestionCard from './QuestionCard';
@@ -10,6 +10,9 @@ import ResultScreen from './ResultScreen';
 
 export default function Wizard() {
   const {
+    questions,
+    isLoadingQuestions,
+    fetchQuestions,
     answers,
     currentStepIndex,
     sjtScore,
@@ -21,25 +24,88 @@ export default function Wizard() {
     prevStep,
     reset,
     submitAnswers,
-  } = useFormStore();
+  } = useFormStore() as any; // Cast to any to avoid type errors since we extended it in JS
 
-  const filteredQuestions = getFilteredQuestions(answers);
+  const autoAdvanceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimer.current) {
+        clearTimeout(autoAdvanceTimer.current);
+      }
+    };
+  }, []);
+
+  // ── Dynamic question filtering logic ──
+  const getFilteredQuestions = (answers: Record<string, string>, allQuestions: Question[]): Question[] => {
+    const blockAQuestions = allQuestions.filter((q) => q.block === 'A');
+    const isBlockAComplete = blockAQuestions.every((q) => answers[q.id]);
+
+    let skipBlockB = false;
+    if (isBlockAComplete) {
+      if (sjtScore >= 9 || sjtScore < 5) {
+        skipBlockB = true;
+      }
+    }
+
+    return allQuestions.filter((q) => {
+      if (q.block === 'B' && skipBlockB) return false;
+
+      if (q.dependsOn) {
+        const parentValue = answers[q.dependsOn.questionId];
+        if (Array.isArray(q.dependsOn.value)) {
+          return q.dependsOn.value.includes(parentValue);
+        }
+        return parentValue === q.dependsOn.value;
+      }
+
+      return true;
+    });
+  };
+
+  const filteredQuestions = getFilteredQuestions(answers, questions);
   const currentQuestion = filteredQuestions[currentStepIndex];
   const isLastQuestion = currentStepIndex === filteredQuestions.length - 1;
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] || '' : '';
   const canProceed = currentAnswer.trim().length > 0;
-  const progress = Math.round(
+  const progress = filteredQuestions.length > 0 ? Math.round(
     ((currentStepIndex + 1) / filteredQuestions.length) * 100
-  );
+  ) : 0;
 
-  // Detect block transitions for header animation
   const prevQuestion =
     currentStepIndex > 0 ? filteredQuestions[currentStepIndex - 1] : null;
   const isNewBlock = prevQuestion
     ? prevQuestion.block !== currentQuestion?.block
     : true;
 
-  // ── Result screen ──
+  const handleAnswer = (questionId: string, val: string) => {
+    setAnswer(questionId, val);
+
+    // Auto-advance for radio buttons
+    if (currentQuestion.type === 'radio' && !isLastQuestion) {
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = setTimeout(() => {
+        nextStep();
+      }, 500); // 500ms delay for visual feedback
+    }
+  };
+
+  if (isLoadingQuestions) {
+    return (
+      <div className="glass-card-elevated p-6 md:p-10 flex items-center justify-center min-h-[300px]">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-8 w-8 border-4 border-plum border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-foreground-secondary">Загрузка вопросов...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (submissionResult) {
     return (
       <ResultScreen
@@ -50,12 +116,10 @@ export default function Wizard() {
     );
   }
 
-  // ── Guard ──
   if (!currentQuestion) return null;
 
   return (
     <div className="glass-card-elevated p-6 md:p-10">
-      {/* Progress */}
       <ProgressBar
         currentBlock={currentQuestion.block}
         progress={progress}
@@ -63,46 +127,32 @@ export default function Wizard() {
         totalSteps={filteredQuestions.length}
       />
 
-      {/* Block header (shown on block transitions) */}
       {isNewBlock && (
         <BlockHeader block={currentQuestion.block} showTransition />
       )}
 
-      {/* Divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-foreground-tertiary/20 to-transparent mb-8" />
 
-      {/* Question */}
       <div className="min-h-[260px]" key={currentQuestion.id}>
         <QuestionCard
           question={currentQuestion}
           currentAnswer={currentAnswer}
-          onAnswer={setAnswer}
+          onAnswer={handleAnswer}
         />
       </div>
 
-      {/* SJT live score (visible during Block A) */}
-      {currentQuestion.block === 'A' && sjtScore > 0 && (
-        <div className="mt-6 flex items-center gap-2 animate-fade-in">
-          <span className="text-xs text-foreground-tertiary">
-            SJT-балл:
-          </span>
-          <span className="text-sm font-mono font-semibold text-accent">
-            {sjtScore}
-          </span>
-        </div>
-      )}
-
-      {/* Error message */}
       {error && (
-        <div className="mt-4 p-4 rounded-xl bg-danger/10 border border-danger/20 animate-fade-in">
-          <p className="text-sm text-danger">{error}</p>
+        <div className="mt-4 p-4 rounded-xl bg-plum-muted border border-plum/20 animate-fade-in">
+          <p className="text-sm text-plum-light">{error}</p>
         </div>
       )}
 
-      {/* Navigation */}
       <div className="flex items-center justify-between mt-10 pt-6 border-t border-foreground-tertiary/10">
         <button
-          onClick={prevStep}
+          onClick={() => {
+            if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+            prevStep();
+          }}
           disabled={currentStepIndex === 0 || isSubmitting}
           className="btn-ghost"
         >
@@ -111,7 +161,10 @@ export default function Wizard() {
 
         {isLastQuestion ? (
           <button
-            onClick={submitAnswers}
+            onClick={() => {
+               if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+               submitAnswers();
+            }}
             disabled={!canProceed || isSubmitting}
             className="btn-primary"
           >
@@ -144,7 +197,10 @@ export default function Wizard() {
           </button>
         ) : (
           <button
-            onClick={nextStep}
+            onClick={() => {
+               if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+               nextStep();
+            }}
             disabled={!canProceed}
             className="btn-primary"
           >

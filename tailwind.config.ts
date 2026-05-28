@@ -1,57 +1,73 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: [
-    './app/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-  ],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Roboto', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       colors: {
+        /* ── Reference palette (Arcade Architecture) ── */
+        plum: {
+          DEFAULT: '#A04A84',
+          light: '#B86A9E',
+          dark: '#7A3466',
+          muted: 'rgba(160, 74, 132, 0.12)',
+        },
+        violet: {
+          DEFAULT: '#6B70A3',
+          light: '#8F93C0',
+          muted: 'rgba(107, 112, 163, 0.15)',
+        },
+        teal: {
+          DEFAULT: '#00859E',
+          light: '#57A7B3',
+          sky: '#A2D9F7',
+          muted: 'rgba(0, 133, 158, 0.12)',
+        },
+        peach: {
+          DEFAULT: '#FCD5A6',
+          muted: 'rgba(252, 213, 166, 0.2)',
+        },
+        /* ── Surfaces (warm dark tones) ── */
         surface: {
-          DEFAULT: 'hsl(230 15% 8%)',
-          raised: 'hsl(230 15% 12%)',
-          overlay: 'hsl(230 15% 16%)',
+          DEFAULT: '#1E1515',
+          raised: '#2A2020',
+          overlay: '#342A2A',
+          light: '#ededed',
         },
-        accent: {
-          DEFAULT: 'hsl(250 80% 65%)',
-          hover: 'hsl(250 80% 72%)',
-          muted: 'hsl(250 40% 25%)',
-        },
-        success: 'hsl(145 65% 50%)',
-        warning: 'hsl(40 95% 55%)',
-        danger: 'hsl(0 75% 55%)',
-        muted: 'hsl(230 10% 50%)',
+        /* ── Text ── */
         foreground: {
-          DEFAULT: 'hsl(0 0% 95%)',
-          secondary: 'hsl(230 10% 65%)',
-          tertiary: 'hsl(230 10% 45%)',
+          DEFAULT: '#f0f0f0',
+          secondary: '#c8c8c8',
+          tertiary: '#838383',
+          dark: '#222222',
         },
+        /* ── Status ── */
+        success: '#57A7B3',
+        warning: '#FCD5A6',
+        danger: '#A04A84',
+        muted: '#727272',
       },
       borderRadius: {
         '2xl': '1rem',
         '3xl': '1.5rem',
       },
       boxShadow: {
-        'glass': '0 8px 32px rgba(0, 0, 0, 0.3)',
-        'glass-lg': '0 16px 48px rgba(0, 0, 0, 0.4)',
-        'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
-        'glow-lg': '0 0 40px rgba(99, 102, 241, 0.2)',
-      },
-      backdropBlur: {
-        'xs': '2px',
+        glass: '0 8px 32px rgba(30, 21, 21, 0.4)',
+        'glass-lg': '0 16px 48px rgba(30, 21, 21, 0.5)',
+        glow: '0 0 24px rgba(160, 74, 132, 0.15)',
+        'glow-lg': '0 0 40px rgba(160, 74, 132, 0.2)',
+        'glow-teal': '0 0 24px rgba(0, 133, 158, 0.15)',
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease-out',
         'slide-up': 'slideUp 0.5s ease-out',
         'slide-in-right': 'slideInRight 0.4s ease-out',
         'scale-in': 'scaleIn 0.3s ease-out',
-        'pulse-slow': 'pulse 3s infinite',
-        'shimmer': 'shimmer 2s linear infinite',
+        shimmer: 'shimmer 2s linear infinite',
       },
       keyframes: {
         fadeIn: {

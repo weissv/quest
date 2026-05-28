@@ -1,8 +1,16 @@
 import { create } from 'zustand';
-import { FormState, EvaluationResult, ParentRole } from '@/types';
-import { calculateCurrentSJT } from '@/data/questions';
+import { FormState, EvaluationResult, ParentRole, Question } from '@/types';
 
-export const useFormStore = create<FormState>((set, get) => ({
+// Extend FormState to include questions
+interface ExtendedFormState extends FormState {
+  questions: Question[];
+  isLoadingQuestions: boolean;
+  fetchQuestions: () => Promise<void>;
+}
+
+export const useFormStore = create<ExtendedFormState>((set, get) => ({
+  questions: [],
+  isLoadingQuestions: true,
   answers: {},
   currentStepIndex: 0,
   sjtScore: 0,
@@ -11,11 +19,31 @@ export const useFormStore = create<FormState>((set, get) => ({
   submissionResult: null,
   error: null,
 
+  fetchQuestions: async () => {
+    try {
+      const res = await fetch('/api/questions');
+      const questions = await res.json();
+      set({ questions, isLoadingQuestions: false });
+    } catch (error) {
+      console.error('Failed to fetch questions', error);
+      set({ isLoadingQuestions: false });
+    }
+  },
+
   setAnswer: (questionId, answer) => {
     const newAnswers = { ...get().answers, [questionId]: answer };
+    const questions = get().questions;
 
     // Recalculate SJT score on every Block A answer change
-    const sjtScore = calculateCurrentSJT(newAnswers);
+    let sjtScore = 0;
+    questions.forEach((q) => {
+      if (q.block === 'A' && q.options) {
+        const selected = q.options.find((opt) => opt.label === newAnswers[q.id]);
+        if (selected && typeof selected.weight === 'number') {
+          sjtScore += selected.weight;
+        }
+      }
+    });
 
     // Track parent role for conditional routing
     const parentRole =

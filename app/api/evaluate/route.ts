@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { questions } from '@/data/questions';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getQuestions, saveResult } from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -13,12 +13,14 @@ export async function POST(req: Request) {
       );
     }
 
+    const questions = await getQuestions();
+
     // ── 1. Calculate SJT Score ──
     let sjtScore = 0;
-    questions.forEach((q) => {
+    questions.forEach((q: any) => {
       if (q.block === 'A' && q.options) {
         const selectedOption = q.options.find(
-          (opt) => opt.label === answers[q.id]
+          (opt: any) => opt.label === answers[q.id]
         );
         if (selectedOption && typeof selectedOption.weight === 'number') {
           sjtScore += selectedOption.weight;
@@ -104,6 +106,17 @@ ${openAnswers}
         aiVerdict = { error: 'GEMINI_API_KEY не задан на сервере' };
       }
     }
+
+    // ── 5. Save Result ──
+    const finalResult = {
+      id: Date.now().toString(),
+      answers,
+      sjtScore,
+      status,
+      aiAnalysis: aiVerdict,
+    };
+    
+    await saveResult(finalResult);
 
     return NextResponse.json({
       status,

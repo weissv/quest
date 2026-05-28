@@ -26,6 +26,8 @@ export interface Question {
   };
   /** Alternative text for the mirror version (Block C — opposite parent) */
   mirrorText?: string;
+  /** Position for the visual Blueprint editor */
+  position?: { x: number; y: number };
 }
 
 // ── Block metadata ──────────────────────────────

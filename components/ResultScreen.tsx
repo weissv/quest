@@ -20,7 +20,6 @@ export default function ResultScreen({
   // Determine visual theme
   const isPositive = sjtScore >= 9;
   const isNeutral = sjtScore >= 5 && sjtScore < 9;
-  const isNegative = sjtScore < 5;
 
   const statusBadgeClass = isPositive
     ? 'badge-success'
@@ -29,10 +28,10 @@ export default function ResultScreen({
       : 'badge-danger';
 
   const scoreBarColor = isPositive
-    ? 'hsl(145, 65%, 50%)'
+    ? '#57A7B3'
     : isNeutral
-      ? 'hsl(40, 95%, 55%)'
-      : 'hsl(0, 75%, 55%)';
+      ? '#FCD5A6'
+      : '#A04A84';
 
   return (
     <div className="glass-card-elevated p-8 md:p-10 animate-scale-in">
@@ -43,19 +42,23 @@ export default function ResultScreen({
             {isPositive ? '✅' : isNeutral ? '🟡' : '❌'}
           </span>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-          Результат анализа
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+          Спасибо за прохождение!
         </h1>
+        <p className="text-foreground-secondary text-sm max-w-md mx-auto mb-4">
+          Ваши ответы были отправлены на анализ. Результат будет рассмотрен
+          куратором школы.
+        </p>
         <div className={`badge ${statusBadgeClass} text-sm`}>
           {result.status}
         </div>
       </div>
 
-      {/* SJT Score visualization */}
+      {/* SJT Score visualization — ADMIN-ONLY info, visible only on result screen */}
       <div className="glass-card p-6 mb-6">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-foreground-secondary">
-            Балл SJT (Ситуационный тест)
+            Балл SJT (служебная информация)
           </span>
           <span className="text-2xl font-bold text-foreground font-mono">
             {sjtScore}
@@ -79,9 +82,9 @@ export default function ResultScreen({
 
         {/* Score interpretation */}
         <div className="flex justify-between mt-3 text-xs text-foreground-tertiary">
-          <span>0 — Не совместимо</span>
-          <span>5-8 — Верификация</span>
-          <span>9-12 — Зачисление</span>
+          <span>0–4 Не совместимо</span>
+          <span>5–8 Верификация</span>
+          <span>9–12 Зачисление</span>
         </div>
       </div>
 
@@ -106,10 +109,10 @@ export default function ResultScreen({
                   <span
                     className={`text-xl font-bold ${
                       score === 2
-                        ? 'text-success'
+                        ? 'text-teal-light'
                         : score === 1
-                          ? 'text-warning'
-                          : 'text-danger'
+                          ? 'text-peach'
+                          : 'text-plum-light'
                     }`}
                   >
                     {score}
@@ -121,9 +124,9 @@ export default function ResultScreen({
 
           {/* Risk flags */}
           {result.aiAnalysis.riskFlags && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-danger/10 border border-danger/20 mb-4">
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-plum-muted border border-plum/20 mb-4">
               <span>⚠️</span>
-              <span className="text-sm text-danger font-medium">
+              <span className="text-sm text-plum-light font-medium">
                 Обнаружены флаги риска
               </span>
             </div>
@@ -153,9 +156,11 @@ export default function ResultScreen({
       {/* AI error */}
       {result.aiAnalysis?.error && (
         <div className="glass-card p-6 mb-6">
-          <div className="flex items-center gap-2 text-warning">
+          <div className="flex items-center gap-2 text-peach">
             <span>⚠️</span>
-            <span className="text-sm font-medium">{result.aiAnalysis.error}</span>
+            <span className="text-sm font-medium">
+              {result.aiAnalysis.error}
+            </span>
           </div>
         </div>
       )}

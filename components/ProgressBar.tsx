@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { BlockType } from '@/types';
-import { BLOCK_META } from '@/data/questions';
+import { BLOCK_META } from '@/lib/constants';
 
 interface ProgressBarProps {
   currentBlock: BlockType;
-  progress: number; // 0-100
+  progress: number;
   currentStep: number;
   totalSteps: number;
 }
@@ -21,39 +21,66 @@ export default function ProgressBar({
 }: ProgressBarProps) {
   const currentBlockIndex = BLOCK_ORDER.indexOf(currentBlock);
 
+  const getColorClasses = (b: BlockType, isActive: boolean, isCompleted: boolean) => {
+    let base = { bg: 'bg-plum', text: 'text-white', border: 'border-plum', bar: 'bg-plum', completedBg: 'bg-plum/20', completedBorder: 'border-plum/40', completedText: 'text-plum' };
+    
+    switch (b) {
+      case '0':
+        base = { bg: 'bg-teal', text: 'text-white', border: 'border-teal', bar: 'bg-teal', completedBg: 'bg-teal/20', completedBorder: 'border-teal/40', completedText: 'text-teal' };
+        break;
+      case 'A':
+        base = { bg: 'bg-success', text: 'text-white', border: 'border-success', bar: 'bg-success', completedBg: 'bg-success/20', completedBorder: 'border-success/40', completedText: 'text-success' };
+        break;
+      case 'B':
+        base = { bg: 'bg-warning', text: 'text-surface', border: 'border-warning', bar: 'bg-warning', completedBg: 'bg-warning/20', completedBorder: 'border-warning/40', completedText: 'text-warning' };
+        break;
+      case 'C':
+        base = { bg: 'bg-violet', text: 'text-white', border: 'border-violet', bar: 'bg-violet', completedBg: 'bg-violet/20', completedBorder: 'border-violet/40', completedText: 'text-violet' };
+        break;
+    }
+
+    if (isActive) {
+      return `border-2 ${base.bg} ${base.text} ${base.border} shadow-glow`;
+    } else if (isCompleted) {
+      return `border-2 ${base.completedBg} ${base.completedText} ${base.completedBorder}`;
+    }
+    return `border-2 bg-surface-raised text-foreground-tertiary border-surface-overlay`;
+  };
+
+  const getBarColor = (b: BlockType) => {
+    switch (b) {
+      case '0': return 'bg-teal';
+      case 'A': return 'bg-success';
+      case 'B': return 'bg-warning';
+      case 'C': return 'bg-violet';
+      default: return 'bg-plum';
+    }
+  };
+
   return (
-    <div className="mb-8">
+    <div className="mb-10">
       {/* Block indicators */}
-      <div className="flex items-center gap-1.5 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         {BLOCK_ORDER.map((block, idx) => {
           const meta = BLOCK_META[block];
           const isActive = idx === currentBlockIndex;
           const isCompleted = idx < currentBlockIndex;
+          
+          const iconClass = getColorClasses(block, isActive, isCompleted);
+          const barClass = getBarColor(block);
 
           return (
-            <div key={block} className="flex items-center gap-1.5">
+            <div key={block} className="flex items-center gap-2 flex-1">
               <div
-                className={`
-                  flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold
-                  transition-all duration-300
-                  ${
-                    isActive
-                      ? 'bg-accent/20 text-accent border border-accent/40 shadow-glow'
-                      : isCompleted
-                        ? 'bg-success/15 text-success border border-success/30'
-                        : 'bg-surface-raised text-foreground-tertiary border border-transparent'
-                  }
-                `}
+                className={`flex items-center justify-center w-10 h-10 rounded-xl text-sm font-bold transition-all duration-300 ${iconClass}`}
                 title={meta.title}
               >
                 {isCompleted ? '✓' : meta.icon}
               </div>
               {idx < BLOCK_ORDER.length - 1 && (
-                <div
-                  className={`w-6 h-px transition-colors duration-300 ${
-                    isCompleted ? 'bg-success/40' : 'bg-foreground-tertiary/20'
-                  }`}
-                />
+                <div className="flex-1 h-1 bg-surface-raised rounded-full overflow-hidden">
+                  <div className={`h-full transition-all duration-500 ${barClass} ${isCompleted ? 'w-full' : 'w-0'}`}></div>
+                </div>
               )}
             </div>
           );
@@ -61,34 +88,23 @@ export default function ProgressBar({
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-1.5 bg-surface-raised rounded-full overflow-hidden">
+      <div className="relative h-2.5 bg-surface-raised rounded-full overflow-hidden border border-surface-overlay">
         <div
           className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${progress}%`,
-            background:
-              'linear-gradient(90deg, hsl(250 80% 65%), hsl(270 75% 55%))',
-          }}
-        />
-        {/* Shimmer effect */}
-        <div
-          className="absolute inset-y-0 left-0 rounded-full opacity-40 animate-shimmer"
-          style={{
-            width: `${progress}%`,
-            backgroundSize: '200% 100%',
-            backgroundImage:
-              'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)',
+            background: '#A04A84', /* Solid plum */
           }}
         />
       </div>
 
       {/* Step counter */}
-      <div className="flex items-center justify-between mt-2.5">
-        <span className="text-xs text-foreground-tertiary font-medium">
+      <div className="flex items-center justify-between mt-3">
+        <span className="text-sm text-foreground-secondary font-bold uppercase tracking-wider">
           {BLOCK_META[currentBlock].title}
         </span>
-        <span className="text-xs text-foreground-tertiary font-mono">
-          {currentStep} / {totalSteps}
+        <span className="badge badge-accent bg-surface border-surface-overlay">
+          {currentStep} из {totalSteps}
         </span>
       </div>
     </div>

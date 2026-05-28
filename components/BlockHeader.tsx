@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BlockType } from '@/types';
-import { BLOCK_META } from '@/data/questions';
+import { BLOCK_META } from '@/lib/constants';
 
 interface BlockHeaderProps {
   block: BlockType;
@@ -15,22 +15,34 @@ export default function BlockHeader({
 }: BlockHeaderProps) {
   const meta = BLOCK_META[block];
 
+  const getColorClasses = (b: BlockType) => {
+    switch (b) {
+      case '0': return { badge: 'badge-teal', title: 'sp-title-teal', iconBg: 'bg-teal/10 border-teal/20' };
+      case 'A': return { badge: 'badge-success', title: 'sp-title-success', iconBg: 'bg-success/10 border-success/20' };
+      case 'B': return { badge: 'badge-warning', title: 'sp-title-warning', iconBg: 'bg-warning/10 border-warning/20' };
+      case 'C': return { badge: 'badge-violet', title: 'sp-title-violet', iconBg: 'bg-violet/10 border-violet/20' };
+      default: return { badge: 'badge-accent', title: 'sp-title', iconBg: 'bg-plum/10 border-plum/20' };
+    }
+  };
+
+  const styles = getColorClasses(block);
+
   return (
     <div
-      className={`mb-6 ${showTransition ? 'animate-fade-in' : ''}`}
+      className={`mb-8 ${showTransition ? 'animate-fade-in' : ''}`}
     >
-      <div className="flex items-center gap-3 mb-1.5">
-        <span className="text-2xl">{meta.icon}</span>
+      <div className="flex items-center gap-4 mb-2">
+        <span className={`text-3xl p-2 rounded-xl border ${styles.iconBg}`}>{meta.icon}</span>
         <div>
-          <div className="flex items-center gap-2">
-            <span className="badge badge-accent">Блок {block}</span>
+          <div className="mb-1">
+            <span className={`badge ${styles.badge}`}>Блок {block}</span>
           </div>
-          <h2 className="text-lg font-bold text-foreground mt-1">
-            {meta.title}
+          <h2 className={`${styles.title} text-xl md:text-2xl font-bold tracking-tight`}>
+            <span>{meta.title}</span>
           </h2>
         </div>
       </div>
-      <p className="text-sm text-foreground-secondary pl-[2.75rem]">
+      <p className="text-sm text-foreground-secondary pl-[4.5rem]">
         {meta.subtitle}
       </p>
     </div>

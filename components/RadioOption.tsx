@@ -39,8 +39,8 @@ export default function RadioOption({
             w-5 h-5 rounded-full border-2 transition-all duration-200
             ${
               isSelected
-                ? 'border-accent bg-accent shadow-glow'
-                : 'border-foreground-tertiary/50 bg-transparent'
+                ? 'border-plum bg-plum shadow-glow'
+                : 'border-foreground-tertiary/40 bg-transparent'
             }
           `}
         >
