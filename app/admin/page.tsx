@@ -10,8 +10,14 @@ export default async function AdminDashboard() {
   const questions = await prisma.question.findMany();
 
   const totalResults = results.length;
-  const approvedResults = results.filter((r: any) => r.status && r.status.toLowerCase().includes('прямое зачисление')).length;
-  const rejectedResults = results.filter((r: any) => r.status && r.status.toLowerCase().includes('не совместимо')).length;
+  const approvedResults = results.filter((r: any) => {
+    const s = (r.status || '').toLowerCase();
+    return s === 'approved' || s.includes('зачисление') || s.includes('✅');
+  }).length;
+  const rejectedResults = results.filter((r: any) => {
+    const s = (r.status || '').toLowerCase();
+    return s === 'rejected' || s.includes('отказ') || s.includes('не совместимо') || s.includes('❌');
+  }).length;
   const reviewResults = totalResults - approvedResults - rejectedResults;
 
   return (
