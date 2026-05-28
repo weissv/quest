@@ -3,36 +3,9 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
 import fs from 'fs/promises';
 
-function getDatabaseUrl(url: string | undefined): string | undefined {
-  if (!url) return url;
-  if (url.startsWith('prisma+postgres://')) {
-    try {
-      const parsedUrl = new URL(url);
-      const apiKey = parsedUrl.searchParams.get('api_key');
-      if (apiKey) {
-        const decoded = Buffer.from(apiKey, 'base64').toString('utf-8');
-        const config = JSON.parse(decoded);
-        if (config.databaseUrl) {
-          return config.databaseUrl;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to parse prisma+postgres URL, using original:', e);
-    }
-  }
-  return url;
-}
-
-const connectionString = getDatabaseUrl(process.env.DATABASE_URL);
-const pool = new Pool({
-  connectionString,
-});
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting data migration to PostgreSQL...');
