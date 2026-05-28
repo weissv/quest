@@ -19,3 +19,4 @@ dist/
 
 /lib/generated/prisma
 deploy_result*.json
+tsconfig.tsbuildinfo
