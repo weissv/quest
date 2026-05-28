@@ -4,6 +4,7 @@ import React from 'react';
 import { Question } from '@/types';
 import RadioOption from './RadioOption';
 import TextInput from './TextInput';
+import SlidersMatrix from './SlidersMatrix';
 
 interface QuestionCardProps {
   question: Question;
@@ -51,6 +52,14 @@ export default function QuestionCard({
             />
           ))}
         </div>
+      )}
+
+      {/* Sliders Matrix */}
+      {question.type === 'sliders' && (
+        <SlidersMatrix
+          value={currentAnswer}
+          onChange={(val) => onAnswer(question.id, val)}
+        />
       )}
     </div>
   );

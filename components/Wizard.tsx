@@ -46,15 +46,15 @@ export default function Wizard() {
     const blockAQuestions = allQuestions.filter((q) => q.block === 'A');
     const isBlockAComplete = blockAQuestions.every((q) => answers[q.id]);
 
-    let skipBlockB = false;
+    let skipRest = false;
     if (isBlockAComplete) {
-      if (sjtScore >= 9 || sjtScore < 5) {
-        skipBlockB = true;
+      if (sjtScore >= 10 || sjtScore <= 4) {
+        skipRest = true;
       }
     }
 
     return allQuestions.filter((q) => {
-      if (q.block === 'B' && skipBlockB) return false;
+      if ((q.block === 'B' || q.block === 'C') && skipRest) return false;
 
       if (q.dependsOn) {
         const parentValue = answers[q.dependsOn.questionId];

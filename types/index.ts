@@ -4,7 +4,7 @@
 
 // ── Question types ──────────────────────────────
 
-export type QuestionType = 'text' | 'radio';
+export type QuestionType = 'text' | 'radio' | 'sliders';
 export type BlockType = '0' | 'A' | 'B' | 'C' | 'D';
 
 export interface Option {
@@ -43,10 +43,9 @@ export interface BlockMeta {
 
 export interface AIVerdict {
   scores?: Record<string, number>;
-  riskFlags?: boolean;
-  recommendation?: string;
-  comment?: string;
-  rawText?: string;
+  total_score?: number;
+  reasoning?: string;
+  status?: string;
   error?: string;
 }
 
