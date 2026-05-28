@@ -41,27 +41,7 @@ export default function Wizard() {
     };
   }, []);
 
-  // Keyboard Navigation (Enter to proceed)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in a text field
-      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
-        return;
-      }
-      if (e.key === 'Enter' && canProceed && !isSubmitting) {
-        e.preventDefault();
-        if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
-        
-        if (isLastQuestion) {
-          submitAnswers();
-        } else {
-          nextStep();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canProceed, isSubmitting, isLastQuestion, submitAnswers, nextStep]);
+  // Keyboard Navigation will be moved down
 
   // ── Dynamic question filtering logic ──
   const getFilteredQuestions = (answers: Record<string, any>, allQuestions: Question[], currentCohort: string | null): Question[] => {
@@ -109,6 +89,28 @@ export default function Wizard() {
     }
   }
     
+  // Keyboard Navigation (Enter to proceed)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in a text field
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+        return;
+      }
+      if (e.key === 'Enter' && canProceed && !isSubmitting) {
+        e.preventDefault();
+        if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+        
+        if (isLastQuestion) {
+          submitAnswers();
+        } else {
+          nextStep();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canProceed, isSubmitting, isLastQuestion, submitAnswers, nextStep]);
+
   const progress = filteredQuestions.length > 0 ? Math.round(
     ((currentStepIndex + 1) / filteredQuestions.length) * 100
   ) : 0;
