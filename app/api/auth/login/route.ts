@@ -10,7 +10,6 @@ export async function POST(request: Request) {
       // Set an HTTP-only cookie to authorize the admin session
       cookies().set('admin_token', 'authorized', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24 * 7, // 1 week
