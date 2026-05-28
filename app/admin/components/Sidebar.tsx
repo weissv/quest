@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Database, Users, Network, User } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutDashboard, FileText, Database, Users, Network, LogOut } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const links = [
     { href: '/admin', icon: LayoutDashboard, label: 'Дашборд' },
@@ -14,6 +16,13 @@ export default function Sidebar() {
     { href: '/admin/blueprint', icon: Network, label: 'Граф логики (Blueprint)' },
     { href: '/admin/results', icon: Users, label: 'Результаты' },
   ];
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/admin/login');
+    router.refresh();
+  };
 
   return (
     <aside className="w-64 border-r border-foreground-tertiary/10 flex flex-col glass-card rounded-none border-t-0 border-l-0 border-b-0 h-full relative overflow-hidden">
@@ -48,17 +57,24 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* User profile dummy */}
-      <div className="p-4 border-t border-foreground-tertiary/10 relative z-10 bg-background-main/30">
+      <div className="p-4 border-t border-foreground-tertiary/10 relative z-10 bg-background-main/30 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-plum to-teal flex items-center justify-center text-white font-bold shadow-glow">
             A
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold truncate">Admin User</p>
-            <p className="text-xs text-foreground-tertiary truncate">admin@quest.com</p>
+            <p className="text-xs text-foreground-tertiary truncate">Куратор</p>
           </div>
         </div>
+        <button 
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 text-sm font-bold text-danger border border-danger/30 bg-danger/10 hover:bg-danger hover:text-white rounded-xl transition-colors disabled:opacity-50"
+        >
+          <LogOut className="w-4 h-4" />
+          {loggingOut ? 'Выход...' : 'Выйти'}
+        </button>
       </div>
     </aside>
   );

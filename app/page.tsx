@@ -2,8 +2,9 @@ import Wizard from '@/components/Wizard';
 
 export default function Home() {
   return (
-    <main className="min-h-screen p-4 md:p-8 gradient-mesh">
-      <div className="max-w-3xl mx-auto pt-8 md:pt-16 pb-20">
+    <main className="min-h-screen relative text-foreground">
+      <div className="fixed top-0 left-0 w-full h-full gradient-mesh opacity-30 pointer-events-none -z-10" />
+      <div className="max-w-3xl mx-auto pt-8 md:pt-16 pb-20 p-4 md:p-8 relative z-10">
         {/* Hero header */}
         <header className="mb-10 md:mb-14 animate-fade-in glass-card p-8 md:p-10 relative overflow-hidden">
           {/* Subtle glow accent */}

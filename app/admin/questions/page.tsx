@@ -120,11 +120,22 @@ export default function QuestionsPage() {
             const blockQuestions = questions.filter(q => q.block === block);
             if (blockQuestions.length === 0) return null;
             
+            const getHeaderClasses = (b: string) => {
+              switch (b) {
+                case '0': return { text: 'text-teal', bg: 'bg-teal/10', border: 'border-teal/30' };
+                case 'A': return { text: 'text-success', bg: 'bg-success/10', border: 'border-success/30' };
+                case 'B': return { text: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/30' };
+                case 'C': return { text: 'text-violet', bg: 'bg-violet/10', border: 'border-violet/30' };
+                default: return { text: 'text-plum', bg: 'bg-plum/10', border: 'border-plum/30' };
+              }
+            };
+            const styles = getHeaderClasses(block);
+
             return (
               <div key={block} className="animate-slide-up relative" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
                 <div className="sticky top-0 z-10 bg-[#1E1515]/95 backdrop-blur-xl py-4 mb-6 border-b border-foreground-tertiary/20 shadow-sm">
-                  <h2 className="text-2xl font-black tracking-tight text-plum flex items-center gap-3">
-                     <span className="w-10 h-10 rounded-xl bg-plum/10 border border-plum/30 flex items-center justify-center text-plum text-lg shadow-inner">{block}</span>
+                  <h2 className={`text-2xl font-black tracking-tight ${styles.text} flex items-center gap-3`}>
+                     <span className={`w-10 h-10 rounded-xl ${styles.bg} border ${styles.border} flex items-center justify-center ${styles.text} text-lg shadow-inner`}>{block}</span>
                      Блок {block}
                   </h2>
                 </div>
