@@ -10,8 +10,10 @@ lerna-debug.log*
 build/
 dist/
 qu/
+.DS_Store/
 database_dump.md
 database_export.md
+qwen_list.md
 
 # Переменные окружения (секреты)
 .env
