@@ -17,10 +17,18 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Payload must be an array' }, { status: 400 });
     }
 
+    const validQuestions = questions.filter((q: any) => 
+      q && typeof q.id === 'string' && typeof q.block === 'string' && typeof q.type === 'string' && typeof q.text === 'string'
+    );
+
+    if (validQuestions.length === 0 && questions.length > 0) {
+      return NextResponse.json({ error: 'No valid questions found in payload' }, { status: 400 });
+    }
+
     await prisma.$transaction([
       prisma.question.deleteMany(),
       prisma.question.createMany({
-        data: questions.map((q: any) => ({
+        data: validQuestions.map((q: any) => ({
           id: q.id,
           block: q.block,
           type: q.type,

@@ -80,7 +80,9 @@ export async function POST(req: Request) {
         });
 
         const result = await model.generateContent(aiPrompt);
-        const responseText = result.response.text();
+        let responseText = result.response.text();
+        // Clean markdown wrapper from LLM response if present
+        responseText = responseText.replace(/```json\n?|```\n?/g, '').trim();
         aiAnalysis = JSON.parse(responseText);
       } catch (err: any) {
         console.error('Gemini API Error:', err);
@@ -89,9 +91,9 @@ export async function POST(req: Request) {
 
     // ── 5. Determine Overall Status ──
     let finalStatus = 'pending';
-    if (aiAnalysis?.riskFlags) {
+    if (sjtScore < 5 || aiAnalysis?.riskFlags) {
       finalStatus = 'rejected';
-    } else if (sjtScore >= 6) {
+    } else if (sjtScore >= 9) {
       finalStatus = 'approved';
     }
 
