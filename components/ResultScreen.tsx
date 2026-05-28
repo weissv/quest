@@ -122,33 +122,36 @@ export default function ResultScreen({
             </div>
           )}
 
-          {/* Risk flags */}
-          {result.aiAnalysis.riskFlags && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-plum-muted border border-plum/20 mb-4">
-              <span>⚠️</span>
-              <span className="text-sm text-plum-light font-medium">
-                Обнаружены флаги риска
+          {/* Total Score */}
+          {result.aiAnalysis.total_score !== undefined && (
+            <div className="flex justify-between items-center bg-surface-raised p-4 rounded-xl mb-4">
+              <span className="text-sm font-semibold text-foreground-secondary">Общий балл AI:</span>
+              <span className="text-xl font-bold text-teal-light">{result.aiAnalysis.total_score}</span>
+            </div>
+          )}
+
+          {/* AI Status */}
+          {result.aiAnalysis.status && (
+            <div className={`p-4 rounded-xl border mb-4 ${result.aiAnalysis.status === 'approved' ? 'bg-success/10 border-success/20 text-success' : 'bg-danger/10 border-danger/20 text-danger'}`}>
+              <span className="text-xs uppercase tracking-wider block mb-1">
+                Вердикт ИИ
+              </span>
+              <span className="font-bold">
+                {result.aiAnalysis.status}
               </span>
             </div>
           )}
 
-          {/* Recommendation */}
-          {result.aiAnalysis.recommendation && (
-            <div className="p-4 rounded-xl bg-surface-raised">
-              <span className="text-xs text-foreground-tertiary uppercase tracking-wider block mb-1">
-                Рекомендация
+          {/* Reasoning */}
+          {result.aiAnalysis.reasoning && (
+            <div className="mt-4 p-4 rounded-xl bg-surface-raised">
+              <span className="text-xs text-foreground-tertiary uppercase tracking-wider block mb-2">
+                Психологический анализ
               </span>
-              <span className="text-foreground font-semibold">
-                {result.aiAnalysis.recommendation}
-              </span>
+              <p className="text-sm text-foreground-secondary leading-relaxed">
+                {result.aiAnalysis.reasoning}
+              </p>
             </div>
-          )}
-
-          {/* Comment */}
-          {result.aiAnalysis.comment && (
-            <p className="mt-4 text-sm text-foreground-secondary leading-relaxed">
-              {result.aiAnalysis.comment}
-            </p>
           )}
         </div>
       )}
