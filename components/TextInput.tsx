@@ -10,7 +10,7 @@ interface TextInputProps {
 }
 
 export default function TextInput({
-  value,
+  value = '',
   onChange,
   placeholder = 'Ваш ответ...',
   maxLength = 2000,
