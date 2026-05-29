@@ -81,8 +81,6 @@ export async function POST(req: Request) {
         .replace('{OPEN_ANSWERS}', openAnswers);
 
       try {
-        // IMPORTANT: gemma-4-31b-it does NOT support responseMimeType: 'application/json'
-        // Using it returns empty/malformed responses. JSON is enforced via the prompt text itself.
         const model = genAI.getGenerativeModel({
           model: 'gemma-4-31b-it',
         });
