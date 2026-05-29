@@ -74,7 +74,10 @@ export async function POST(req: Request) {
 {"scores":{"B1":0,"B2":0,"B3":0},"total_score":0,"reasoning":"Краткий профессиональный психологический анализ...","status":"approved"}`;
 
       const promptTemplate = setting?.value || defaultPrompt;
-      const aiPrompt = promptTemplate.replace('{OPEN_ANSWERS}', openAnswers);
+      // Support both ${openAnswers} (template literal style) and {OPEN_ANSWERS} (old style)
+      const aiPrompt = promptTemplate
+        .replace('${openAnswers}', openAnswers)
+        .replace('{OPEN_ANSWERS}', openAnswers);
 
       try {
         // IMPORTANT: gemma-4-31b-it does NOT support responseMimeType: 'application/json'
