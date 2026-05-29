@@ -541,7 +541,8 @@ function AIResultPanel({ result, label, onRefresh }: { result: EvaluationResult;
   };
 
   const ai = result.aiAnalysis;
-  const hasAI = ai && ai.reasoning && !ai.error;
+  const aiReasoning = ai?.reasoning || ai?.comment;
+  const hasAI = ai && aiReasoning && !ai.error;
   const hasError = ai && ai.error;
 
   const scoreColor = (val: number) => {
@@ -593,14 +594,14 @@ function AIResultPanel({ result, label, onRefresh }: { result: EvaluationResult;
 
       {hasError && (
         <div className="flex-1">
-          <p className="text-xs text-amber-400/80 italic">{ai.reasoning}</p>
+          <p className="text-xs text-amber-400/80 italic">{aiReasoning}</p>
           <p className="text-[10px] text-white/30 mt-2">Нажмите &quot;Повторить Анализ&quot; для новой попытки</p>
         </div>
       )}
 
       {hasAI && (
         <>
-          <p className="text-sm text-white/75 leading-relaxed flex-1">{ai.reasoning}</p>
+          <p className="text-sm text-white/75 leading-relaxed flex-1">{aiReasoning}</p>
           {ai.scores && (
             <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.05]">
               {Object.entries(ai.scores).map(([k, v]) => (

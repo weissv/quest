@@ -92,6 +92,17 @@ export async function POST(req: Request) {
         
         aiAnalysis = extractValidJSON(responseText);
         
+        // Validate schema
+        if (!aiAnalysis || typeof aiAnalysis !== 'object') {
+          throw new Error('AI returned non-object JSON');
+        }
+        if (aiAnalysis.total_score === undefined && !aiAnalysis.scores) {
+          throw new Error('AI JSON missing scores and total_score fields');
+        }
+        if (!aiAnalysis.comment && !aiAnalysis.reasoning) {
+          throw new Error('AI JSON missing comment/reasoning field');
+        }
+        
         console.log('[re-evaluate] AI analysis OK. score=', aiAnalysis?.total_score);
         
       } catch (err: any) {
