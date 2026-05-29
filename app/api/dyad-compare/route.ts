@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { extractValidJSON } from '@/lib/json-extractor';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -83,22 +84,13 @@ export async function POST(req: Request) {
     const model = genAI.getGenerativeModel({ model: 'gemma-4-31b-it' });
 
     const aiResult = await model.generateContent(`${systemPrompt}\n\n${answersText}`);
-    let text = aiResult.response.text()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
+    let text = aiResult.response.text();
 
     let analysis: any;
     try {
-      analysis = JSON.parse(text);
-    } catch {
-      const m = text.match(/\{[\s\S]*\}/);
-      if (m) {
-        analysis = JSON.parse(m[0]);
-      } else {
-        throw new Error('Cannot parse AI response: ' + text.substring(0, 200));
-      }
+      analysis = extractValidJSON(text);
+    } catch (err: any) {
+      throw new Error('Cannot parse AI response: ' + text.substring(0, 200) + ' | ' + err.message);
     }
 
     return NextResponse.json({ success: true, analysis });

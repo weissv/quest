@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { extractValidJSON } from '@/lib/json-extractor';
 
 export async function POST(req: Request) {
   try {
@@ -91,36 +92,7 @@ export async function POST(req: Request) {
         
         console.log('[re-evaluate] Raw AI response (first 400):', responseText.substring(0, 400));
         
-        // Strategy 1: Strip ```json ... ``` markdown wrappers
-        responseText = responseText
-          .replace(/^```json\s*/i, '')
-          .replace(/^```\s*/i, '')
-          .replace(/\s*```$/i, '')
-          .trim();
-
-        // Strategy 2: Direct parse
-        try {
-          aiAnalysis = JSON.parse(responseText);
-        } catch (e1) {
-          // Strategy 3: Greedy regex for first {...} blob
-          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            try {
-              aiAnalysis = JSON.parse(jsonMatch[0]);
-            } catch (e2) {
-              // Strategy 4: Slice from first { to last }
-              const s = responseText.indexOf('{');
-              const e = responseText.lastIndexOf('}');
-              if (s !== -1 && e !== -1 && e > s) {
-                aiAnalysis = JSON.parse(responseText.substring(s, e + 1));
-              } else {
-                throw new Error(`Cannot extract JSON. Raw: ${responseText.substring(0, 300)}`);
-              }
-            }
-          } else {
-            throw new Error(`No JSON object found in AI response. Raw: ${responseText.substring(0, 300)}`);
-          }
-        }
+        aiAnalysis = extractValidJSON(responseText);
         
         console.log('[re-evaluate] AI analysis OK. score=', aiAnalysis?.total_score);
         

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { extractValidJSON } from '@/lib/json-extractor';
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -187,19 +188,7 @@ async function runAIEvaluator(questions: any[], answers: any, sjtScore: number) 
 
     const response = await model.generateContent(openQuestionsData);
     const text = response.response.text();
-    // Use regex to strip out any potential markdown wrapping just in case
-    const cleanJson = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-    
-    try {
-      return JSON.parse(cleanJson);
-    } catch (parseError) {
-      // Fallback greedy JSON match
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error("Cannot parse JSON: " + text);
-    }
+    return extractValidJSON(text);
   } catch (err: any) {
     console.error('Gemini API Error:', err);
     return {
