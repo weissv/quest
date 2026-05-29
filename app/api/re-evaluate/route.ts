@@ -64,54 +64,73 @@ export async function POST(req: Request) {
 - Естественные последствия: Родитель позволил ребенку ошибиться, получить низкий балл или столкнуться с отказом, чтобы тот получил опыт.
 
 АНАЛИЗ БЛОКА C (Ответственность):
-Взгляни на распределение %. В норме для школьника средних классов ответственность ребенка должна быть существенной (обычно ≥ 40-50%). Если родитель отдал Школе неадекватно много (например, >50%), это маркер потребительского отношения. Если Семье >60% — гиперопека. Если Ребенку отведено менее 30% — это жесткий триггер инфантилизации. Используй это для корректировки финального вывода.
+Взгляни на распределение %. В норме для школьника средних классов ответственность ребенка должна быть существенной (обычно >= 40-50%). Если родитель отдал Школе неадекватно много (например, >50%), это маркер потребительского отношения. Если Семье >60% — гиперопека. Если Ребенку отведено менее 30% — это жесткий триггер инфантилизации. Используй это для корректировки финального вывода.
 
 ОТВЕТЫ ПОЛЬЗОВАТЕЛЯ:
 {OPEN_ANSWERS}
 
-ФОРМАТ ОТВЕТА:
-Ты обязан вернуть результат СТРОГО в формате валидного JSON (без markdown-разметки, без комментариев). 
-Схема JSON:
-{
-  "scores": {
-    "B1": 0,
-    "B2": 0,
-    "B3": 0
-  },
-  "total_score": 0,
-  "reasoning": "Здесь напиши краткий, безжалостный и профессиональный психологический анализ...",
-  "status": "approved или rejected"
-}`;
+КРИТИЧЕСКИ ВАЖНО: Верни ТОЛЬКО валидный JSON без каких-либо пояснений, markdown-разметки, кавычек или текста до/после. Начни ответ с символа { и заверши символом }.
+Строго следуй этой схеме JSON:
+{"scores":{"B1":0,"B2":0,"B3":0},"total_score":0,"reasoning":"Краткий профессиональный психологический анализ...","status":"approved"}`;
 
       const promptTemplate = setting?.value || defaultPrompt;
       const aiPrompt = promptTemplate.replace('{OPEN_ANSWERS}', openAnswers);
 
       try {
+        // IMPORTANT: gemma-4-31b-it does NOT support responseMimeType: 'application/json'
+        // Using it returns empty/malformed responses. JSON is enforced via the prompt text itself.
         const model = genAI.getGenerativeModel({
           model: 'gemma-4-31b-it',
-          generationConfig: { responseMimeType: 'application/json' },
         });
 
         const result = await model.generateContent(aiPrompt);
         let responseText = result.response.text();
         
-        // Strip markdown blocks if any
-        responseText = responseText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+        console.log('[re-evaluate] Raw AI response (first 400):', responseText.substring(0, 400));
         
+        // Strategy 1: Strip ```json ... ``` markdown wrappers
+        responseText = responseText
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim();
+
+        // Strategy 2: Direct parse
         try {
           aiAnalysis = JSON.parse(responseText);
-        } catch (parseError) {
-          // Fallback to greedy extraction if direct parse fails
+        } catch (e1) {
+          // Strategy 3: Greedy regex for first {...} blob
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            aiAnalysis = JSON.parse(jsonMatch[0]);
+            try {
+              aiAnalysis = JSON.parse(jsonMatch[0]);
+            } catch (e2) {
+              // Strategy 4: Slice from first { to last }
+              const s = responseText.indexOf('{');
+              const e = responseText.lastIndexOf('}');
+              if (s !== -1 && e !== -1 && e > s) {
+                aiAnalysis = JSON.parse(responseText.substring(s, e + 1));
+              } else {
+                throw new Error(`Cannot extract JSON. Raw: ${responseText.substring(0, 300)}`);
+              }
+            }
           } else {
-            throw new Error('No JSON found in response: ' + responseText);
+            throw new Error(`No JSON object found in AI response. Raw: ${responseText.substring(0, 300)}`);
           }
         }
+        
+        console.log('[re-evaluate] AI analysis OK. score=', aiAnalysis?.total_score);
+        
       } catch (err: any) {
-        console.error('Gemini API Error:', err);
-        return NextResponse.json({ error: 'AI Error: ' + err.message }, { status: 500 });
+        console.error('Gemini API Error:', err.message);
+        // Graceful fallback — admin sees error but panel keeps working
+        aiAnalysis = {
+          scores: { B1: 0, B2: 0, B3: 0 },
+          total_score: 0,
+          reasoning: `Ошибка ИИ-анализа. Требуется ручная модерация. ${err.message?.substring(0, 100) || ''}`,
+          status: 'pending',
+          error: true,
+        };
       }
     }
 

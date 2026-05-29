@@ -187,62 +187,107 @@ function getRoleLabel(result: EvaluationResult): string {
 
 function AIResultPanel({ result, label, onRefresh }: { result: EvaluationResult; label: string; onRefresh: () => void }) {
   const [isReevaluating, setIsReevaluating] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleReevaluate = async () => {
     setIsReevaluating(true);
+    setLocalError(null);
     try {
       const res = await fetch('/api/re-evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resultId: result.id }),
       });
-      if (!res.ok) throw new Error('Failed to re-evaluate');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Ошибка сервера');
+      }
       onRefresh(); // Refresh parent data
-    } catch (error) {
-      alert('Ошибка при повторном анализе');
+    } catch (error: any) {
+      setLocalError(error.message || 'Неизвестная ошибка');
     } finally {
       setIsReevaluating(false);
     }
   };
 
   const ai = result.aiAnalysis;
-  const hasAI = ai && ai.reasoning;
+  const hasAI = ai && ai.reasoning && !ai.error;
+  const hasError = ai && ai.error;
+
+  const scoreColor = (val: number) => {
+    if (val === 2) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    if (val === 1) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+  };
 
   return (
-    <div className={`relative flex flex-col rounded-2xl border p-5 ${
-      hasAI 
-        ? (ai.status === 'approved' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10')
-        : 'bg-white/[0.02] border-white/[0.05]'
+    <div className={`relative flex flex-col rounded-2xl border p-5 gap-3 ${
+      hasError
+        ? 'bg-amber-500/5 border-amber-500/15'
+        : hasAI 
+          ? (ai.status === 'approved' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10')
+          : 'bg-white/[0.02] border-white/[0.05]'
     }`}>
-      <div className="flex items-center justify-between mb-3">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
         <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
-          {label} {hasAI ? `• ${ai.status === 'approved' ? 'Одобрено ИИ' : 'Отказ ИИ'}` : '• Нет данных'}
+          {label}
+          {hasAI && <span className={`ml-2 ${ai.status === 'approved' ? 'text-emerald-400' : 'text-rose-400'}`}>
+            • {ai.status === 'approved' ? '✓ Одобрено' : '✗ Отказ'}
+          </span>}
+          {hasError && <span className="ml-2 text-amber-400">• ⚠ Ошибка ИИ</span>}
+          {!hasAI && !hasError && <span className="ml-2 text-white/30">• Ожидает анализа</span>}
         </p>
         <button 
           onClick={handleReevaluate}
           disabled={isReevaluating}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-xs font-bold text-white/70 disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 transition-all text-xs font-bold text-violet-300 border border-violet-500/20 hover:border-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isReevaluating ? 'animate-spin' : ''}`} />
-          Повторить Анализ
+          {isReevaluating ? 'Анализирую...' : 'Повторить Анализ'}
         </button>
       </div>
 
-      {!hasAI ? (
+      {/* Error from button click */}
+      {localError && (
+        <div className="px-3 py-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs text-rose-400">
+          Ошибка: {localError}
+        </div>
+      )}
+
+      {/* No data */}
+      {!hasAI && !hasError && (
         <div className="flex-1 flex flex-col items-center justify-center text-center text-white/30 min-h-[100px]">
           <Cpu className="w-8 h-8 opacity-20 mb-2" />
-          <p className="text-xs uppercase tracking-wider font-bold">Ожидает анализа</p>
+          <p className="text-xs uppercase tracking-wider font-bold">Нет данных ИИ</p>
+          <p className="text-[10px] mt-1 opacity-60">Нажмите &quot;Повторить Анализ&quot;</p>
         </div>
-      ) : (
+      )}
+
+      {/* AI Error fallback */}
+      {hasError && (
+        <div className="flex-1">
+          <p className="text-xs text-amber-400/80 italic">{ai.reasoning}</p>
+          <p className="text-[10px] text-white/30 mt-2">Нажмите &quot;Повторить Анализ&quot; для новой попытки</p>
+        </div>
+      )}
+
+      {/* AI Result */}
+      {hasAI && (
         <>
-          <p className="text-sm text-white/70 leading-relaxed flex-1">{ai.reasoning}</p>
+          <p className="text-sm text-white/75 leading-relaxed flex-1">{ai.reasoning}</p>
           {ai.scores && (
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-white/[0.05]">
+            <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.05]">
               {Object.entries(ai.scores).map(([k, v]) => (
-                <span key={k} className="px-2 py-1 bg-white/[0.05] rounded text-xs font-mono text-white/50">
-                  {k}: <strong className="text-white/80">{String(v)}</strong>
+                <span key={k} className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${scoreColor(Number(v))}`}>
+                  {k}: {String(v)}/2
                 </span>
               ))}
+              {ai.total_score !== undefined && (
+                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white/5 border border-white/10 text-white/60 ml-auto">
+                  Итого: <strong className="text-white/90">{ai.total_score}</strong>
+                </span>
+              )}
             </div>
           )}
         </>
