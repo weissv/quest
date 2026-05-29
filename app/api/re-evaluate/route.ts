@@ -88,17 +88,26 @@ export async function POST(req: Request) {
 
       try {
         const model = genAI.getGenerativeModel({
-          model: 'gemma-4-31b-it',
+          model: 'gemini-1.5-pro-latest',
           generationConfig: { responseMimeType: 'application/json' },
         });
 
         const result = await model.generateContent(aiPrompt);
         let responseText = result.response.text();
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          aiAnalysis = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found in response: ' + responseText);
+        
+        // Strip markdown blocks if any
+        responseText = responseText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+        
+        try {
+          aiAnalysis = JSON.parse(responseText);
+        } catch (parseError) {
+          // Fallback to greedy extraction if direct parse fails
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            aiAnalysis = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON found in response: ' + responseText);
+          }
         }
       } catch (err: any) {
         console.error('Gemini API Error:', err);
