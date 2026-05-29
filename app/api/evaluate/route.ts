@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 // Use standard model based on user settings earlier (e.g., gemini-1.5-pro or standard text model)
-const AI_MODEL = 'gemini-1.5-pro-latest';
+const AI_MODEL = 'gemma-4-31b-it';
 
 export async function POST(req: Request) {
   try {
@@ -189,7 +189,17 @@ async function runAIEvaluator(questions: any[], answers: any, sjtScore: number) 
     const text = response.response.text();
     // Use regex to strip out any potential markdown wrapping just in case
     const cleanJson = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-    return JSON.parse(cleanJson);
+    
+    try {
+      return JSON.parse(cleanJson);
+    } catch (parseError) {
+      // Fallback greedy JSON match
+      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error("Cannot parse JSON: " + text);
+    }
   } catch (err: any) {
     console.error('Gemini API Error:', err);
     return {
