@@ -292,34 +292,12 @@ function ComparisonBlock({
   questions: Question[];
   sjtDiff: SjtDiffItem[];
 }) {
-  const [dyadAnalysis, setDyadAnalysis] = useState<any>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [dyadError, setDyadError] = useState<string | null>(null);
-
-  const handleDyadCompare = async () => {
-    setIsAnalyzing(true);
-    setDyadError(null);
-    try {
-      const res = await fetch('/api/dyad-compare', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resultIds: results.map(r => r.id) }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Ошибка сервера');
-      setDyadAnalysis(data.analysis);
-    } catch (e: any) {
-      setDyadError(e.message);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const matchCount = sjtDiff.filter(d => !d.hasMismatch && d.answers.length > 1).length;
-  const mismatchCount = sjtDiff.filter(d => d.hasMismatch).length;
-
-  // Only show SJT comparison if there are 2+ results
+  const mismatchItems = sjtDiff.filter(d => d.hasMismatch);
   const showSjt = results.length >= 2;
+
+  if (!showSjt || mismatchItems.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-4">
@@ -327,187 +305,57 @@ function ComparisonBlock({
         <GitCompare className="w-5 h-5" /> Сравнение
       </h3>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ── LEFT: SJT Matches & Mismatches ── */}
-        <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Scale className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-white/70">Закрытые тесты (SJT)</span>
-            </div>
-            {showSjt && (
-              <div className="flex gap-3 text-xs font-bold">
-                <span className="text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {matchCount} совпад.
-                </span>
-                <span className="text-rose-400 flex items-center gap-1">
-                  <XCircle className="w-3.5 h-3.5" /> {mismatchCount} расх.
-                </span>
-              </div>
-            )}
+      <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Scale className="w-4 h-4 text-indigo-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-white/70">Закрытые тесты (Расхождения)</span>
           </div>
-
-          {!showSjt ? (
-            <div className="p-8 text-center text-white/30 text-xs">
-              <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              Нужны анкеты обоих родителей для сравнения
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.04] max-h-[600px] overflow-y-auto custom-scrollbar">
-              {sjtDiff.map((item) => (
-                <div key={item.code} className={`px-5 py-4 ${item.hasMismatch ? 'bg-rose-500/5' : ''}`}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-0.5">
-                      {item.hasMismatch
-                        ? <XCircle className="w-4 h-4 text-rose-400" />
-                        : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold bg-white/10 text-white/50 px-2 py-0.5 rounded uppercase tracking-wider">{item.code}</span>
-                        {item.hasMismatch && (
-                          <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Расхождение</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-white/60 leading-relaxed mb-2 line-clamp-2">{item.text}</p>
-                      <div className="space-y-1.5">
-                        {item.answers.map((ans, i) => {
-                          const weightColor =
-                            ans.weight === 2 ? 'text-emerald-400' :
-                            ans.weight === 0 ? 'text-rose-400' :
-                            'text-amber-400';
-                          return (
-                            <div key={i} className="flex items-start gap-2">
-                              <span className={`text-[10px] font-black w-10 flex-shrink-0 uppercase ${weightColor}`}>
-                                {ans.role}
-                              </span>
-                              <span className="text-[10px] text-white/50 leading-relaxed">{ans.optionLabel}</span>
-                              {ans.weight !== null && (
-                                <span className={`ml-auto text-[10px] font-black flex-shrink-0 ${weightColor}`}>
-                                  {ans.weight}б
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex gap-3 text-xs font-bold">
+            <span className="text-rose-400 flex items-center gap-1">
+              <XCircle className="w-3.5 h-3.5" /> {mismatchItems.length} расх.
+            </span>
+          </div>
         </div>
 
-        {/* ── RIGHT: AI Dyad Analysis (Open questions B + C) ── */}
-        <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden flex flex-col">
-          <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-violet-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-white/70">ИИ-анализ открытых ответов (B + C)</span>
-            </div>
-            <button
-              onClick={handleDyadCompare}
-              disabled={isAnalyzing || results.length < 2}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 transition-all text-xs font-bold text-violet-300 border border-violet-500/20 hover:border-violet-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Sparkles className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-pulse' : ''}`} />
-              {isAnalyzing ? 'Анализирую...' : dyadAnalysis ? 'Обновить' : 'Запустить ИИ'}
-            </button>
-          </div>
-
-          <div className="flex-1 p-6">
-            {dyadError && (
-              <div className="mb-4 px-3 py-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-xs text-rose-400">
-                Ошибка: {dyadError}
-              </div>
-            )}
-
-            {!dyadAnalysis && !dyadError && !isAnalyzing && (
-              <div className="flex flex-col items-center justify-center h-40 text-center text-white/25">
-                <Sparkles className="w-8 h-8 mb-2 opacity-30" />
-                <p className="text-xs uppercase tracking-wider font-bold">Нет анализа</p>
-                <p className="text-[10px] mt-1 opacity-60">
-                  {results.length < 2
-                    ? 'Нужны анкеты обоих родителей'
-                    : 'Нажмите «Запустить ИИ» для сравнения открытых ответов'}
-                </p>
-              </div>
-            )}
-
-            {isAnalyzing && (
-              <div className="flex flex-col items-center justify-center h-40 text-center text-white/40">
-                <div className="w-8 h-8 rounded-full border-2 border-violet-500/30 border-t-violet-400 animate-spin mb-3" />
-                <p className="text-xs">ИИ сравнивает ответы...</p>
-              </div>
-            )}
-
-            {dyadAnalysis && !isAnalyzing && (
-              <div className="space-y-4">
-                {/* Dyad Score */}
-                <div className="flex items-center justify-between p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl">
-                  <span className="text-xs font-bold text-violet-300 uppercase tracking-wider">Совместимость диады</span>
-                  <span className="text-2xl font-black text-violet-400">{dyadAnalysis.dyadScore ?? '—'}<span className="text-sm text-violet-400/60">/10</span></span>
+        <div className="divide-y divide-white/[0.04] max-h-[600px] overflow-y-auto custom-scrollbar">
+          {mismatchItems.map((item) => (
+            <div key={item.code} className="px-5 py-4 bg-rose-500/5">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <XCircle className="w-4 h-4 text-rose-400" />
                 </div>
-
-                {/* Summary */}
-                {dyadAnalysis.summary && (
-                  <div className="p-4 bg-white/[0.02] border border-white/[0.05] rounded-xl">
-                    <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Вывод</p>
-                    <p className="text-sm text-white/75 leading-relaxed">{dyadAnalysis.summary}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold bg-white/10 text-white/50 px-2 py-0.5 rounded uppercase tracking-wider">{item.code}</span>
+                    <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Расхождение</span>
                   </div>
-                )}
-
-                {/* Agreements */}
-                {dyadAnalysis.agreements?.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Согласие ({dyadAnalysis.agreements.length})
-                    </p>
-                    <ul className="space-y-1.5">
-                      {dyadAnalysis.agreements.map((a: string, i: number) => (
-                        <li key={i} className="text-xs text-white/60 leading-relaxed flex gap-2">
-                          <span className="text-emerald-500/50 flex-shrink-0">•</span> {a}
-                        </li>
-                      ))}
-                    </ul>
+                  <p className="text-xs text-white/60 leading-relaxed mb-2 line-clamp-2">{item.text}</p>
+                  <div className="space-y-1.5">
+                    {item.answers.map((ans, i) => {
+                      const weightColor =
+                        ans.weight === 2 ? 'text-emerald-400' :
+                        ans.weight === 0 ? 'text-rose-400' :
+                        'text-amber-400';
+                      return (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className={`text-[10px] font-black w-10 flex-shrink-0 uppercase ${weightColor}`}>
+                            {ans.role}
+                          </span>
+                          <span className="text-[10px] text-white/50 leading-relaxed">{ans.optionLabel}</span>
+                          {ans.weight !== null && (
+                            <span className={`ml-auto text-[10px] font-black flex-shrink-0 ${weightColor}`}>
+                              {ans.weight}б
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-
-                {/* Conflicts */}
-                {dyadAnalysis.conflicts?.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <XCircle className="w-3.5 h-3.5" /> Расхождения ({dyadAnalysis.conflicts.length})
-                    </p>
-                    <ul className="space-y-1.5">
-                      {dyadAnalysis.conflicts.map((c: string, i: number) => (
-                        <li key={i} className="text-xs text-white/60 leading-relaxed flex gap-2">
-                          <span className="text-amber-500/50 flex-shrink-0">•</span> {c}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Red Flags */}
-                {dyadAnalysis.redFlags?.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold text-rose-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Красные флаги ({dyadAnalysis.redFlags.length})
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {dyadAnalysis.redFlags.map((f: string, i: number) => (
-                        <span key={i} className="text-[10px] px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
-                          {f}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
