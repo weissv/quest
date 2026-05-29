@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { FamilyProfile, PipelineStatus, EvaluationResult } from '@/types';
+import { FamilyProfile, PipelineStatus, EvaluationResult, Question } from '@/types';
 import KanbanBoard from '../components/KanbanBoard';
-import FamilyDrawer from '../components/FamilyDrawer';
+import FamilyDetailView from '../components/FamilyDetailView';
 
 /* ─── Helpers ───────────────────────────────────── */
 
@@ -76,6 +76,7 @@ function aggregateFamily(results: EvaluationResult[]): FamilyProfile {
 
 export default function ResultsPage() {
   const [families, setFamilies] = useState<FamilyProfile[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFamily, setSelectedFamily] = useState<FamilyProfile | null>(null);
 
@@ -109,6 +110,7 @@ export default function ResultsPage() {
 
   useEffect(() => {
     fetchResults();
+    fetch('/api/questions').then(r => r.json()).then(setQuestions).catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -158,17 +160,21 @@ export default function ResultsPage() {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        <KanbanBoard 
-          families={families} 
-          onStatusChange={handleStatusChange} 
-          onFamilyClick={setSelectedFamily}
-        />
+        {selectedFamily ? (
+          <FamilyDetailView 
+            family={selectedFamily} 
+            questions={questions}
+            onBack={() => setSelectedFamily(null)} 
+            onRefreshResults={fetchResults}
+          />
+        ) : (
+          <KanbanBoard 
+            families={families} 
+            onStatusChange={handleStatusChange} 
+            onFamilyClick={setSelectedFamily}
+          />
+        )}
       </div>
-
-      <FamilyDrawer 
-        family={selectedFamily} 
-        onClose={() => setSelectedFamily(null)} 
-      />
     </div>
   );
 }
