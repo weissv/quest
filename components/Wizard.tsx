@@ -24,6 +24,7 @@ export default function Wizard() {
     prevStep,
     reset,
     submitAnswers,
+    cohort,
   } = useFormStore() as any; // Cast to any to avoid type errors since we extended it in JS
 
   const autoAdvanceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -73,7 +74,7 @@ export default function Wizard() {
     });
   };
 
-  const filteredQuestions = getFilteredQuestions(answers, questions, useFormStore.getState().cohort || null);
+  const filteredQuestions = getFilteredQuestions(answers, questions, cohort || null);
   const currentQuestion = filteredQuestions[currentStepIndex];
   const isLastQuestion = currentStepIndex === filteredQuestions.length - 1;
   const currentAnswer = currentQuestion ? answers[currentQuestion.code || ''] : undefined;
