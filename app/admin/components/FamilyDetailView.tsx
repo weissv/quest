@@ -127,12 +127,11 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/results?familyCode=${encodeURIComponent(family.code)}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        throw new Error('Failed to delete family');
-      }
+      await Promise.all(
+        results.map(r => 
+          fetch(`/api/results/${r.id}`, { method: 'DELETE' })
+        )
+      );
       onRefreshResults();
       onBack();
     } catch (e) {

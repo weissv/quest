@@ -17,9 +17,40 @@ function normalizeStatus(raw: string | null | undefined): PipelineStatus {
   return 'pending';
 }
 
-function aggregateFamily(results: EvaluationResult[]): FamilyProfile {
-  // Try to get family code from the result field, or fallback to answers['0.1']
-  const code = (results[0] as any).familyCode || results[0].answers['0.1'] || 'Без кода';
+function normalizeFamilyCode(code: string): string {
+  if (!code || code === 'Без кода') return 'Без кода';
+  
+  let norm = code.trim().toLowerCase();
+  
+  const replacements = [
+    { endsWith: 'ова', replaceWith: 'ов' },
+    { endsWith: 'ева', replaceWith: 'ев' },
+    { endsWith: 'ёва', replaceWith: 'ёв' },
+    { endsWith: 'ина', replaceWith: 'ин' },
+    { endsWith: 'ына', replaceWith: 'ын' },
+    { endsWith: 'ая', replaceWith: 'ий' },
+    { endsWith: 'ova', replaceWith: 'ov' },
+    { endsWith: 'eva', replaceWith: 'ev' },
+    { endsWith: 'ina', replaceWith: 'in' },
+  ];
+
+  for (const r of replacements) {
+    if (norm.endsWith(r.endsWith)) {
+      return norm.slice(0, -r.endsWith.length) + r.replaceWith;
+    }
+  }
+
+  if (norm.endsWith('ы') || norm.endsWith('и')) {
+      if (norm.endsWith('овы')) return norm.slice(0, -1);
+      if (norm.endsWith('евы')) return norm.slice(0, -1);
+      if (norm.endsWith('ины')) return norm.slice(0, -1);
+  }
+  
+  return norm;
+}
+
+function aggregateFamily(results: EvaluationResult[], displayCode?: string): FamilyProfile {
+  const code = displayCode || (results[0] as any).familyCode || results[0].answers['0.1'] || 'Без кода';
   
   // Average SJT
   const sjtSum = results.reduce((acc, r) => acc + (r.sjtScore || 0), 0);
@@ -85,16 +116,25 @@ export default function ResultsPage() {
       const res = await fetch('/api/results');
       const data: EvaluationResult[] = await res.json();
       
-      // Group by family code
-      const map: Record<string, EvaluationResult[]> = {};
+      // Group by family code with normalization
+      const map: Record<string, { displayCode: string, results: EvaluationResult[] }> = {};
       data.forEach(r => {
-        const code = (r as any).familyCode || r.answers?.['0.1'] || 'Без кода';
-        if (!map[code]) map[code] = [];
-        map[code].push(r);
+        const rawCode = String((r as any).familyCode || r.answers?.['0.1'] || 'Без кода').trim();
+        const normCode = normalizeFamilyCode(rawCode);
+        
+        if (!map[normCode]) {
+          map[normCode] = { displayCode: rawCode, results: [] };
+        } else {
+          // Keep the shorter version as display name (e.g. "Алиев" over "Алиева")
+          if (rawCode.length < map[normCode].displayCode.length && rawCode !== 'Без кода') {
+            map[normCode].displayCode = rawCode;
+          }
+        }
+        map[normCode].results.push(r);
       });
 
       // Map to FamilyProfiles
-      const profiles = Object.values(map).map(aggregateFamily);
+      const profiles = Object.values(map).map(group => aggregateFamily(group.results, group.displayCode));
       setFamilies(profiles);
       
       // If a drawer is open, refresh its data too
