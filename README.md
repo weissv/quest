@@ -1,220 +1,436 @@
-# 🎯 Quest Funnel — Система Диагностики Семьи (v2.0+)
+# Mezon Quest Funnel 3.0
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-88.3%25-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react)](https://react.dev/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?logo=nextdotjs)](https://nextjs.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-5.22-2D3748?logo=prisma)](https://www.prisma.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+> **AI-powered family profiling and psychological screening system for Mezon Inspiring School**
 
-**Аналитический инструмент оценки учебной рутины и дисциплинарных рамок в семьях.** 
-Комплексная Full-Stack платформа с гибридной воронкой на основе ситуационных тестов (SJT), встроенной AI-верификацией поведения, динамическим деревом сценариев и полноценной CRM-подобной панелью администратора (с Kanban-досками, визуальным редактором логики и анализом семейных диад).
+A full-stack Next.js application that serves as the complete digital intake pipeline for school admission — from the parent-facing questionnaire to the admin CRM with AI-assisted decision support.
 
 ---
 
-## 📋 Содержание
+## Table of Contents
 
-- [Описание](#описание)
-- [Архитектура и Стек технологий](#архитектура-и-стек-технологий)
-- [База Данных (Prisma)](#база-данных-prisma)
-- [Механика тестирования](#механика-тестирования)
-- [Панель Администратора (Admin Dashboard)](#панель-администратора-admin-dashboard)
-- [API Маршруты](#api-маршруты)
-- [Установка и запуск](#установка-и-запуск)
-- [Структура проекта](#структура-проекта)
-- [Разработка и Скрипты](#разработка-и-скрипты)
-
----
-
-## 📖 Описание
-
-**Quest Funnel** — это интерактивная платформа для скрининга семей перед поступлением в образовательные программы. Она ориентирована на выявление совместимости ценностей семьи с моделью школы (формирование субъектности, автономности, ответственности).
-
-**Ключевые особенности новой версии:**
-- 🧠 **Умное ветвление (Blueprint):** Вопросы показываются динамически в зависимости от ролей и предыдущих ответов. Управление логикой происходит через визуальный node-редактор.
-- 🤖 **Google Generative AI:** Автоматический анализ "серых зон" (SJT 5-8 баллов) с использованием `Gemini 1.5 Pro` для выявления потребительских маркеров.
-- 👨‍👩‍👦 **Кросс-валидация семей (Dyad Analytics):** Система автоматически связывает анкеты мамы и папы (через `familyCode`), анализируя расхождения в их позициях.
-- 🛡 **Admin CRM:** Полноценное управление процессом поступления — Kanban-доска статусов, просмотр анкет, конфигурация AI-промптов.
+- [Overview](#overview)
+- [How It Works (End-to-End Flow)](#how-it-works-end-to-end-flow)
+- [Scoring Methodology](#scoring-methodology)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Database Schema](#database-schema)
+- [API Reference](#api-reference)
+- [Admin Panel](#admin-panel)
+- [Deployment](#deployment)
+- [Environment Variables](#environment-variables)
+- [Local Development](#local-development)
 
 ---
 
-## 🏗 Архитектура и Стек технологий
+## Overview
 
-```mermaid
-graph TD
-    Client[Frontend: React, Tailwind, Zustand] -->|API Requests| NextAPI[Next.js API Routes]
-    NextAPI -->|CRUD & Analytics| Prisma[(Prisma ORM)]
-    Prisma --> DB[(PostgreSQL)]
-    NextAPI -->|Prompt Evaluation| Gemini[Google Generative AI API]
-    Admin[Admin Panel: xyflow, Kanban] -->|Auth & Config| NextAPI
+Mezon Quest Funnel 3.0 is a psychometric evaluation system designed to screen families applying to [Mezon Inspiring School](https://quest.mezon.uz). The funnel identifies parents whose psychological profiles, communication patterns, and values align with the school's philosophy: **conscious partnership between teacher, parent, and child**.
+
+The system is built around three intellectual pillars:
+
+| Pillar | Description |
+|--------|-------------|
+| **The Mom Test** | Only real past behavior is evaluated. Hypothetical promises ("I would do…") are red flags. |
+| **Boundaries** | A parent must be an independent person, not an extension of their child. Semantic markers of merger ("we" instead of "he/she") are tracked. |
+| **The Gift of Failure** | A child's mistakes are their trainer. Parents who rescue children from consequences of failure exhibit toxic "rescuing" behavior. |
+
+---
+
+## How It Works (End-to-End Flow)
+
+```
+Parent → Questionnaire Wizard → POST /api/evaluate → Admin Kanban Board → Decision
 ```
 
-- **Frontend:** React 18.3, Next.js 14.2 (App Router), Zustand (глобальный стейт формы), TailwindCSS (Glassmorphism), Lucide React (Иконки), @xyflow/react (Dagre) для визуализации графов.
-- **Backend:** Next.js Serverless API, JWT-based Auth для админки.
-- **База Данных:** PostgreSQL (разворачивается локально или в облаке), Prisma ORM (v5.22.0) для управления схемой и миграциями.
-- **AI интеграция:** `@google/generative-ai` для динамической оценки свободных ответов.
+### 1. Questionnaire Wizard (Public)
+
+Parents visit the root URL and fill out a multi-block wizard form. The form fetches questions dynamically from `GET /api/questions` and adapts based on the selected **cohort** (Grades 1–4 or Grades 5–8). Questions are organized into 5 blocks:
+
+| Block | Type | Purpose |
+|-------|------|---------|
+| **0 — Identification** | `SELECT` / `TEXT` | Family code, cohort, parent role (Mother/Father/Guardian) |
+| **A — Situational Scenarios** | `SJT` (Situational Judgment Test) | Behavioral scoring via weighted multiple-choice scenarios |
+| **B — Deep Verification** | `OPEN` (free text, min. 150 chars) | Open-ended questions analyzed by AI |
+| **C — Cross-Validation** | `MATRIX` (responsibility sliders) | Distribution of responsibility between Family/School/Child |
+| **D — Motivational Filter** | `TEXT` / `SELECT` | Final values check |
+
+If SJT score is **≥ 12** or **≤ 6**, Blocks B and C are automatically skipped (fast-track routing). The form auto-advances after radio button selections (500ms delay) and supports `Enter` key navigation.
+
+### 2. Evaluation Engine (`POST /api/evaluate`)
+
+On form submission, the server:
+
+1. **Fetches questions** for the given cohort from the database
+2. **Calculates the SJT score** — sums weights of selected options for Block A questions
+3. **Fast-track routing:**
+   - SJT ≥ 12 → saves result with `status: PENDING` + auto-approve recommendation
+   - SJT ≤ 6 → saves result with `status: PENDING` + auto-reject recommendation
+4. **Gray Zone (6 < SJT < 12):** calls `runAIEvaluator()` using `gemma-4-31b-it` via the Google Generative AI SDK
+5. **Dyad Analysis:** if a partner (other parent from the same `familyCode`) has already submitted, computes:
+   - SJT score delta between partners
+   - Responsibility matrix delta (Block C answers)
+   - If delta is too large → `roleConflict: true` → routes to `INTERVIEW` or `REVIEW` instead of auto-approve/reject
+6. **Calculates total score** (SJT + AI score), determines recommended status, and saves to DB
+
+**All submissions store `status: 'PENDING'`** — final decision is always made manually in the admin panel.
+
+### 3. Result Screen (Public)
+
+After submission, the parent sees:
+- A thank-you message
+- Their SJT score on a visual progress bar (0–12 scale, color-coded)
+- AI analysis breakdown (per-question scores B1/B2/B3, total AI score, verdict, and reasoning) — shown only if AI was triggered
+- Status badge from the server response
+
+### 4. Admin Panel (Protected)
+
+All `/admin/*` routes and most `/api/*` routes require cookie-based authentication (`admin_token=authorized`). The admin panel has four sections:
 
 ---
 
-## 🗄 База Данных (Prisma)
+## Scoring Methodology
 
-Система построена на гибкой реляционной модели (см. `prisma/schema.prisma`):
+### SJT Score (Block A)
+Each Block A question has weighted answer options. The total SJT score ranges from 0 to ~12.
 
-| Модель | Описание |
-|--------|----------|
-| **`Question`** | Хранит конфигурацию вопросов (Текст, Блок, Тип, Опции с весами, Логика зависимостей `dependsOn`, Координаты для визуального редактора `position`). |
-| **`Result`** | Хранит результаты прохождения анкеты пользователем. Включает JSON ответов, SJT Score, AI Score, массив поведенческих флагов (`behavioralFlags`) и статус. |
-| **`Setting`** | Хранилище key-value (например, для сохранения динамического AI-промпта из админки). |
+| SJT Range | Auto-Decision |
+|-----------|---------------|
+| ≤ 6 | Recommended: REJECTED |
+| 7–11 | Gray Zone → AI called |
+| ≥ 12 | Recommended: APPROVED |
 
-**Ключевые Enums:**
-- `CohortType`: GRADE_1_4, GRADE_5_8.
-- `ParentRole`: MAMA, PAPA, OTHER.
-- `EvaluationStatus`: APPROVED, REJECTED, GREY_ZONE, PENDING, REVIEW, INTERVIEW (используется для Kanban-доски).
+### AI Score (Block B — Open Questions)
+The AI evaluates each open answer on a **0–2 scale**:
 
----
+| Score | Label | Meaning |
+|-------|-------|---------|
+| 0 | 🔴 Red Flag | Rescuing, external locus of control, merger ("we did homework") |
+| 1 | 🟡 Yellow Flag | Correct words but no concrete past actions described |
+| 2 | 🟢 Green Flag | Clear separation of roles, allowed child to experience failure |
 
-## ⚙️ Механика тестирования
-
-Воронка разделена на логические блоки, которые динамически фильтруются на клиенте (`Wizard.tsx`) и сервере:
-
-1. **Блок 0 (Идентификация):** Определение ролей (Кто куратор рутины? Кто держит рамку?). Это влияет на показ последующих вопросов. Ввод `Семейного кода` для синхронизации родителей.
-2. **Блок A (SJT - Situational Judgment Test):** 6 закрытых сценариев с неявными весами (0, 1, 2). Автоматический расчет SJT Score.
-    - **≥ 9 баллов** → Авто-пропуск, прямое зачисление (APPROVED).
-    - **5–8 баллов** → Серая зона (GREY_ZONE). Открывается Блок B.
-    - **< 5 баллов** → Отказ (REJECTED).
-3. **Блок B (Глубинная верификация):** Открытые вопросы, которые активируются только в случае попадания в серую зону. Анализируются искусственным интеллектом для поиска "спасательских" или "потребительских" паттернов.
-4. **Блок C (Кросс-валидация):** Зеркальные вопросы для проверки согласованности подходов матери и отца.
-5. **Блок D (Мотивационный фильтр):** Проверка финальных ценностей школы.
+### Combined Decision
+- **Total Score = SJT Score + AI Total Score**
+- Total ≥ 13.5 → APPROVED
+- Total < 13.5 → REJECTED
+- If partner conflict detected + APPROVED → INTERVIEW
+- If REJECTED but Total ≥ 12 → REVIEW
 
 ---
 
-## 🛡 Панель Администратора (Admin Dashboard)
+## Tech Stack
 
-Доступна по пути `/admin` (требует авторизации).
-
-- **Kanban Board (`/admin`):** Удобная визуализация кандидатов по статусам (`PENDING` -> `REVIEW` -> `INTERVIEW` -> `APPROVED`/`REJECTED`). Поддержка Drag & Drop.
-- **Family Analytics (`FamilyDrawer.tsx` / `FamilyCard.tsx`):** При совпадении `familyCode` админ видит консолидированную карточку семьи, сравнивая ответы мамы и папы (Dyad Metrics).
-- **Вопросы (`/admin/questions`):** CRUD интерфейс для управления базой вопросов.
-- **Визуальный редактор (Blueprint) (`/admin/blueprint`):** Интерактивная карта дерева вопросов на базе `@xyflow/react`. Позволяет визуально отслеживать логические связи (`dependsOn`) между блоками.
-- **Промпт Инжиниринг (`/admin/prompt`):** Страница для настройки и сохранения системного промпта для Gemini API напрямую в базу данных.
-- **Таблица результатов (`/admin/results`):** Детализированная таблица всех прохождений с возможностью фильтрации и ручной переоценки.
-
----
-
-## 📡 API Маршруты
-
-Все API находятся в `/app/api/...`:
-
-- **`/api/evaluate` (POST):** Принимает ответы формы. Считает SJT Score. Если нужна AI верификация (SJT 5-8), динамически собирает контекст, подтягивает промпт из БД (`Setting`), вызывает Gemini и сохраняет результат в БД.
-- **`/api/re-evaluate` (POST):** Утилита для массового пересчета старых результатов новым AI-промптом.
-- **`/api/results` (GET, POST):** Получение списка результатов, фильтрация по статусам, создание новых записей.
-- **`/api/results/[id]` (GET, PATCH, DELETE):** Управление конкретной анкетой. Перемещение по Kanban-доске (обновление `evalStatus`).
-- **`/api/questions` (GET, POST, PUT, DELETE):** Управление графом вопросов.
-- **`/api/settings` (GET, POST):** Сохранение и загрузка настроек приложения (AI Prompts).
-- **`/api/auth/login` & `/logout`:** Авторизация администраторов.
+| Layer | Technology |
+|-------|-----------|
+| Framework | **Next.js 14** (App Router, RSC + Client Components) |
+| Language | **TypeScript 5** |
+| Styling | **Tailwind CSS 3** + custom CSS design system |
+| State Management | **Zustand** |
+| Database ORM | **Prisma 5.22** |
+| Database | **PostgreSQL** |
+| AI Model | **`gemma-4-31b-it`** via `@google/generative-ai` SDK |
+| UI Icons | **Lucide React** |
+| Graph/Flow | **@xyflow/react** + **Dagre** (admin question blueprint view) |
+| Date Formatting | **date-fns** |
+| Deployment | **Docker** + **Coolify** (self-hosted PaaS) |
 
 ---
 
-## 🚀 Установка и запуск
+## Project Structure
 
-### Требования
-- **Node.js** ≥ 22.12.0
-- **PostgreSQL** (Локально или облако, например Supabase/Neon)
-- **Google Cloud API Key** (для Gemini)
-
-### 1. Клонирование и зависимости
-```bash
-git clone https://github.com/weissv/quest.git
-cd quest
-npm install
 ```
-
-### 2. Переменные окружения
-Создайте файл `.env` в корне проекта:
-```env
-# База данных PostgreSQL
-DATABASE_URL="postgresql://user:password@localhost:5432/quest?schema=public"
-
-# Google Generative AI
-GEMINI_API_KEY="your_google_gemini_api_key"
-
-# Секрет для JWT авторизации админки
-ADMIN_PASSWORD="your_secure_password"
-JWT_SECRET="your_jwt_secret"
-```
-
-### 3. Настройка Базы Данных
-Сгенерируйте клиент Prisma и примените миграции:
-```bash
-npx prisma generate
-npx prisma db push
-# Для загрузки базового набора вопросов выполните сид-скрипт (если требуется):
-npx ts-node scripts/seed_v4.ts
-```
-
-### 4. Запуск приложения
-```bash
-# Разработка
-npm run dev
-# Откройте http://localhost:3000 (Клиентская часть)
-# Откройте http://localhost:3000/admin (Админка)
-
-# Production build
-npm run build
-npm start
-```
-
----
-
-## 📂 Структура проекта
-
-```text
 quest/
 ├── app/
-│   ├── admin/                # Админ-панель (Dashboard, Blueprint, Kanban, Prompt, Results)
-│   ├── api/                  # Backend API Routes (Auth, Evaluate, DB CRUD)
-│   ├── layout.tsx            # Глобальный Layout (Шрифты, Метаданные)
-│   ├── page.tsx              # Главная страница (Форма-Визард)
-│   └── globals.css           # Tailwind и кастомные стили (Glassmorphism)
-├── components/               # Клиентские компоненты формы
-│   ├── Wizard.tsx            # Главный контроллер формы
-│   ├── QuestionCard.tsx      # Рендер вопроса (Text / Radio)
-│   ├── ProgressBar.tsx       # Индикатор блоков
-│   └── ResultScreen.tsx      # Вывод результатов (SJT + AI Analysis)
-├── lib/                      # Утилиты
-│   ├── db.ts                 # Prisma Client Singleton
-│   └── constants.ts          # Константы блоков, веса
-├── prisma/                   # База данных
-│   └── schema.prisma         # Схема данных PostgreSQL
-├── scripts/                  # Скрипты миграций и сидирования
-│   └── seed_v4.ts            # Скрипт наполнения базы вопросами
-├── store/                    # State Management (Zustand)
-│   └── useFormStore.ts       # Управление состоянием прохождения анкеты
-└── types/                    # TypeScript типы (index.ts)
+│   ├── page.tsx                    # Public: hero + Wizard component
+│   ├── globals.css                 # Global styles + design system tokens
+│   ├── layout.tsx                  # Root layout with font config
+│   ├── api/
+│   │   ├── auth/                   # POST /api/auth/login — cookie auth
+│   │   ├── evaluate/route.ts       # POST /api/evaluate — main scoring engine
+│   │   ├── re-evaluate/route.ts    # POST /api/re-evaluate — admin AI re-run
+│   │   ├── questions/route.ts      # GET / PUT /api/questions — CRUD
+│   │   ├── results/route.ts        # GET /api/results — all results
+│   │   ├── results/[id]/route.ts   # PATCH /api/results/:id — status update
+│   │   ├── dyad-compare/           # GET — compare two family members
+│   │   └── settings/route.ts       # GET / PUT /api/settings — AI prompt config
+│   └── admin/
+│       ├── page.tsx                # Dashboard (stats: total, approved, review)
+│       ├── layout.tsx              # Admin shell with sidebar
+│       ├── login/page.tsx          # Login form
+│       ├── results/page.tsx        # Kanban board + FamilyDetailView
+│       ├── questions/page.tsx      # Question CRUD manager
+│       ├── blueprint/page.tsx      # Visual question flow (React Flow diagram)
+│       ├── prompt/page.tsx         # AI prompt editor (stored in DB)
+│       └── components/
+│           ├── Sidebar.tsx         # Navigation sidebar
+│           ├── KanbanBoard.tsx     # Drag-and-drop family pipeline board
+│           ├── FamilyCard.tsx      # Summary card per family
+│           ├── FamilyDetailView.tsx# Full-screen family profile + AI panels
+│           ├── QuestionCard.tsx    # Question preview card (admin)
+│           ├── QuestionForm.tsx    # Question create/edit modal form
+│           └── QuestionNode.tsx    # React Flow node (blueprint view)
+├── components/                     # Public-facing UI components
+│   ├── Wizard.tsx                  # Multi-step form orchestrator
+│   ├── QuestionCard.tsx            # Question renderer (SJT / OPEN / MATRIX)
+│   ├── RadioOption.tsx             # Styled radio button for SJT
+│   ├── TextInput.tsx               # Textarea for OPEN questions
+│   ├── SlidersMatrix.tsx           # Responsibility distribution sliders
+│   ├── BlockHeader.tsx             # Block title/subtitle display
+│   ├── ProgressBar.tsx             # Block-aware animated progress bar
+│   └── ResultScreen.tsx            # Post-submission result display
+├── lib/
+│   ├── db.ts                       # Prisma client singleton
+│   ├── constants.ts                # BLOCK_META (titles, icons per block)
+│   └── json-extractor.ts           # 4-strategy robust JSON parser for AI output
+├── store/
+│   └── useFormStore.ts             # Zustand store: form state, answers, SJT
+├── types/
+│   └── index.ts                    # All TypeScript types and interfaces
+├── prisma/
+│   └── schema.prisma               # DB schema: Question, Result, Setting
+├── middleware.ts                   # Auth middleware (cookie check)
+├── next.config.js                  # Next.js config (ESLint/TS checks disabled for build)
+├── Dockerfile                      # Docker build: node:22-alpine + prisma generate
+├── tailwind.config.ts              # Extended Tailwind: custom colors, animations
+└── package.json                    # v2.0.0, postinstall: prisma generate
 ```
 
 ---
 
-## 🎨 Дизайн и UI
-Приложение использует философию **Glassmorphism**:
-- Цветовая палитра `hsl` в `tailwind.config.ts`.
-- Анимации `scaleIn`, `fadeIn`, `slideUp` для плавных переходов между вопросами.
-- Глубокий темный фон (`hsl(230 15% 8%)`) с акцентами (`hsl(250 80% 65%)`).
-- Компоненты используют UI-паттерны, снижающие когнитивную нагрузку при заполнении длинных анкет.
+## Database Schema
+
+### `Question`
+Stores all survey questions. Managed via the admin panel.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` (UUID) | Primary key |
+| `code` | `String?` (unique) | Logical code, e.g. `A1`, `B2`, `C1`, `0.3` |
+| `block` | `String` | `'0'`, `'A'`, `'B'`, `'C'`, `'D'` |
+| `cohort` | `CohortType?` | `GRADE_1_4` or `GRADE_5_8` (null = both cohorts) |
+| `type` | `String` | `SJT`, `OPEN`, `MATRIX`, `SELECT`, `TEXT` |
+| `text` | `String` | Question text shown to the parent |
+| `options` | `Json?` | Array of `{label, weight?, value?}` for SJT/SELECT |
+| `dependsOn` | `Json?` | Conditional display: `{questionId, value}` |
+| `mirrorText` | `String?` | Alternate question text (role variant) |
+| `position` | `Json?` | x/y coordinates for the blueprint diagram |
+
+### `Result`
+One row per parent submission.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` (UUID) | Primary key |
+| `familyCode` | `String?` | Links both parents (shared family identifier) |
+| `parentRole` | `ParentRole?` | `MAMA`, `PAPA`, `OTHER` |
+| `cohort` | `CohortType?` | Grade cohort of the child |
+| `answers` | `Json` | Full answers map: `{questionCode: answerValue}` |
+| `sjtScore` | `Float` | Calculated Block A weighted score |
+| `aiScore` | `Float?` | AI total score from Block B evaluation |
+| `totalScore` | `Float` | `sjtScore + aiScore` |
+| `status` | `String` | Admin pipeline status: `PENDING`, `APPROVED`, `REJECTED`, `REVIEW`, `INTERVIEW` |
+| `aiAnalysis` | `Json?` | Full AI response: `{scores, total_score, reasoning, status, behavioral_flags}` |
+| `aiReasoning` | `String?` | Short AI verdict text (legacy field) |
+| `behavioralFlags` | `String[]` | List of detected toxic behavioral patterns |
+| `dyadMetrics` | `Json?` | Partner comparison: delta, roleConflict, metrics |
+
+### `Setting`
+Key-value store for admin-configurable parameters.
+
+| Key | Description |
+|-----|-------------|
+| `gemini_prompt` | Custom AI prompt template for re-evaluation (supports `{OPEN_ANSWERS}` placeholder) |
 
 ---
 
-## 👨‍💻 Разработка и Скрипты
+## API Reference
 
-- `npm run dev` — Запуск локального сервера.
-- `npm run lint` — Проверка кода (ESLint).
-- `npx prisma studio` — Удобный web-интерфейс для просмотра данных в PostgreSQL.
-- `npx ts-node scripts/re_eval_000.ts` — Скрипт для массового пересчета старых ответов в БД новым промптом.
+### Public Endpoints
 
-### Развитие:
-1. Подключение Webhooks (например, для нотификаций в Telegram/Slack при попадании в серую зону).
-2. Расширение `Dyad Metrics` в админке для выявления более сложных паттернов расхождений между родителями.
-3. Интеграция с внешней CRM (через `/api/results` webhooks).
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/questions` | None | Returns all questions (filtered by cohort if provided) |
+| `POST` | `/api/evaluate` | None | Submits form answers, runs scoring engine, saves result |
+| `POST` | `/api/auth/login` | None | Sets `admin_token` cookie on correct password |
+
+### Admin Endpoints (require `admin_token` cookie)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/results` | Returns all results ordered by `createdAt DESC` |
+| `PATCH` | `/api/results/:id` | Updates a result's `status` field |
+| `PUT` | `/api/questions` | Bulk replace all questions (admin saves full list) |
+| `POST` | `/api/re-evaluate` | Re-runs AI analysis for a specific `resultId` |
+| `GET` | `/api/settings` | Returns all settings |
+| `PUT` | `/api/settings` | Updates settings (e.g., custom AI prompt) |
+| `GET` | `/api/dyad-compare` | Returns side-by-side comparison for a family code |
 
 ---
-*MIT License © 2024-2025.*
+
+## Admin Panel
+
+Accessible at `/admin` (redirects to `/admin/login` if not authenticated).
+**Default password:** configured via `ADMIN_PASSWORD` environment variable.
+
+### Dashboard (`/admin`)
+Server-rendered page showing real-time statistics:
+- Total submissions
+- Approved count + percentage bar
+- Under review count + percentage bar  
+- Total questions in the database
+
+### Results / Family Pipeline (`/admin/results`)
+The core CRM view. Submissions are **grouped by `familyCode`** into `FamilyProfile` aggregates. Features:
+
+- **Kanban board** with 4 columns: Pending → Review → Approved → Rejected
+- **Drag-and-drop** to move families between columns (updates all related results)
+- **Click on a family card** → opens `FamilyDetailView` (full-screen overlay) showing:
+  - Average SJT score, average AI score, total rating
+  - Behavioral flags (aggregated across all family members)
+  - **AI Verdict panels** per parent (with color-coded B1/B2/B3 scores and "Re-run AI Analysis" button)
+  - **Responsibility Chart** (Block C — visual bar showing Family/School/Child % distribution)
+  - **Side-by-side answer comparison** with full question text and both parents' answers
+
+### Questions Manager (`/admin/questions`)
+Full CRUD for the question bank:
+- List all questions grouped by block (0, A, B, C, D)
+- Create new questions via modal form
+- Edit existing questions (type, text, options, weights, conditionals, cohort)
+- Delete questions
+
+### Blueprint (`/admin/blueprint`)
+Visual flow diagram (React Flow + Dagre auto-layout) showing all questions as nodes with dependency arrows. Useful for understanding the branching logic.
+
+### AI Prompt Editor (`/admin/prompt`)
+Edit the default AI evaluation prompt stored in the `Setting` table. Supports the `{OPEN_ANSWERS}` placeholder which gets replaced with the parent's Block B + C answers at runtime.
+
+---
+
+## AI Integration
+
+The AI evaluation uses **`gemma-4-31b-it`** (Google Gemma) via the `@google/generative-ai` SDK.
+
+### Important: `gemma-4-31b-it` Compatibility
+- This model does **NOT** support `responseMimeType: 'application/json'`
+- JSON output is enforced via the **prompt text** itself (compact one-liner schema template)
+- Responses are parsed by `lib/json-extractor.ts` which implements **4 extraction strategies**:
+  1. Strip markdown code fences + direct `JSON.parse()`
+  2. Find first ` ```json ... ``` ` block
+  3. Greedy balanced `{ ... }` scan (tries longest match first, walks inward)
+  4. Fallback for `[ ... ]` array responses
+
+If all strategies fail, a graceful fallback object is returned (`error: true`) — the admin panel displays this state clearly without crashing.
+
+---
+
+## Deployment
+
+The application is deployed via **Coolify** (self-hosted PaaS) on a VPS.
+
+### Docker Build
+```dockerfile
+FROM node:22-alpine
+# Installs: libc6-compat, openssl (required by Prisma)
+# Steps: npm ci --legacy-peer-deps → generates Prisma client → next build → expose 3000
+```
+
+Build optimizations in `next.config.js`:
+- `eslint.ignoreDuringBuilds: true` — prevents OOM on low-RAM servers during build
+- `typescript.ignoreBuildErrors: true` — same reason
+
+### Coolify Configuration
+- **Build method:** Dockerfile (custom, not Nixpacks)
+- **Port:** 3000
+- **Domain:** `quest.mezon.uz` (with Let's Encrypt SSL)
+- **Database:** Managed PostgreSQL via Coolify
+
+### Schema Migrations
+Prisma schema changes are applied with:
+```bash
+docker exec <container_id> npx prisma db push
+```
+No migration history is used — `db push` directly syncs the schema.
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string (Prisma format) |
+| `GEMINI_API_KEY` | ✅ | Google AI Studio API key for Gemma model access |
+| `ADMIN_PASSWORD` | ✅ | Password for admin panel login |
+| `PORT` | Optional | Defaults to `3000` |
+| `HOST` | Optional | Defaults to `0.0.0.0` |
+| `NEXT_TELEMETRY_DISABLED` | Optional | Set to `1` to disable Next.js telemetry |
+
+---
+
+## Local Development
+
+### Prerequisites
+- Node.js ≥ 22.12.0
+- PostgreSQL database
+- Google AI Studio API key
+
+### Setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/weissv/quest.git
+cd quest
+
+# 2. Install dependencies (postinstall auto-runs: prisma generate)
+npm install --legacy-peer-deps
+
+# 3. Configure environment
+cp .env.local.example .env.local
+# Edit .env.local with your DATABASE_URL, GEMINI_API_KEY, ADMIN_PASSWORD
+
+# 4. Push schema to database
+npx prisma db push
+
+# 5. Seed initial questions (if applicable)
+# Questions can be added via the admin panel at /admin/questions
+
+# 6. Start development server
+npm run dev
+# App: http://localhost:3000
+# Admin: http://localhost:3000/admin
+```
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm start` | Start production server (binds to 0.0.0.0:3000) |
+| `npm run lint` | Run ESLint |
+| `npx prisma studio` | Open Prisma Studio (DB browser) |
+
+---
+
+## Authentication
+
+The admin panel uses **simple cookie-based authentication**:
+- `POST /api/auth/login` with `{password}` → sets `admin_token=authorized` cookie
+- Next.js middleware (`middleware.ts`) checks this cookie on all `/admin/*` and most `/api/*` routes
+- No JWT, no sessions — intentionally minimal for a single-admin internal tool
+- Public exceptions: `GET /api/questions`, `POST /api/evaluate`, `POST /api/auth/*`
+
+---
+
+## Design System
+
+The UI uses a custom dark design system defined in `app/globals.css` and `tailwind.config.ts`:
+
+- **Color palette:** Deep burgundy/plum backgrounds, teal/violet accents
+- **Glassmorphism:** `.glass-card`, `.glass-card-elevated` utility classes
+- **Animations:** fade-in, slide-up, scale-in, pulse-slow (defined in Tailwind config)
+- **Typography:** System font stack with tight tracking for headings
+- **Custom scrollbar:** `.custom-scrollbar` with thin styled scrollbar
+- **Component classes:** `.btn-primary`, `.btn-ghost`, `.badge`, `.badge-success`, etc.
+
+---
+
+*Built for Mezon Inspiring School — a progressive private school in Uzbekistan focused on developing agency, responsibility, and conscious partnership in families.*
