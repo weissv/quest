@@ -311,9 +311,36 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
               })}
             </div>
           </div>
-
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1a1313] border border-white/[0.08] rounded-2xl max-w-md w-full p-6 animate-scale-in shadow-2xl">
+            <h3 className="text-lg font-black text-white mb-2">Удаление профиля семьи</h3>
+            <p className="text-sm text-white/60 mb-6">
+              Вы действительно хотите удалить семью <span className="text-violet-400 font-bold">{family.code}</span>? Это действие безвозвратно удалит все заполненные анкеты ({family.results.length} шт.) этой семьи из базы данных.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold text-white/40 hover:text-white hover:bg-white/5 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? 'Удаление...' : 'Да, удалить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -396,34 +423,6 @@ function ComparisonBlock({
           ))}
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#1a1313] border border-white/[0.08] rounded-2xl max-w-md w-full p-6 animate-scale-in shadow-2xl">
-            <h3 className="text-lg font-black text-white mb-2">Удаление профиля семьи</h3>
-            <p className="text-sm text-white/60 mb-6">
-              Вы действительно хотите удалить семью <span className="text-violet-400 font-bold">{family.code}</span>? Это действие безвозвратно удалит все заполненные анкеты ({family.results.length} шт.) этой семьи из базы данных.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold text-white/40 hover:text-white hover:bg-white/5 transition-all"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all disabled:opacity-50 flex items-center gap-2"
-              >
-                {isDeleting ? 'Удаление...' : 'Да, удалить'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
