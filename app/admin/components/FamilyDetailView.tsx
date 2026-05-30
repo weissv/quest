@@ -134,43 +134,43 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
   return (
     <div className="absolute inset-0 bg-[#0a0a0a] z-50 flex flex-col h-full w-full animate-fade-in overflow-hidden">
       {/* Header */}
-      <div className="bg-[#1a1313]/90 backdrop-blur-md border-b border-white/[0.08] px-8 py-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-6">
+      <div className="bg-[#1a1313]/90 backdrop-blur-md border-b border-white/[0.08] px-4 md:px-8 py-3 md:py-4 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-3 md:gap-6">
           <button
             onClick={onBack}
-            className="p-2 rounded-full hover:bg-white/5 transition-colors text-white/40 hover:text-white flex items-center gap-2"
+            className="p-1.5 md:p-2 rounded-full hover:bg-white/5 transition-colors text-white/40 hover:text-white flex items-center gap-1.5 md:gap-2"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-bold uppercase tracking-wider">К доске</span>
+            <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
+            <span className="text-xs md:text-sm font-bold uppercase tracking-wider hidden sm:inline">К доске</span>
           </button>
-          <div className="h-8 w-px bg-white/10" />
+          <div className="h-6 md:h-8 w-px bg-white/10" />
           <div>
-            <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-              Семья <span className="text-violet-400 bg-violet-500/10 px-3 py-1 rounded-lg border border-violet-500/20">{family.code}</span>
+            <h2 className="text-lg md:text-2xl font-black text-white tracking-tight flex items-center gap-2 md:gap-3">
+              Семья <span className="text-violet-400 bg-violet-500/10 px-2 py-0.5 md:px-3 md:py-1 rounded-md md:rounded-lg border border-violet-500/20">{family.code}</span>
             </h2>
-            <p className="text-sm text-white/50 mt-1">
+            <p className="text-[10px] md:text-sm text-white/50 mt-0.5 md:mt-1">
               {family.results.length} анкет(а) · Обновлено {format(family.updatedAt, 'dd.MM HH:mm')}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-        <div className="max-w-7xl mx-auto space-y-10 pb-20">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6 md:space-y-10 pb-20">
 
           {/* ── Summary Stats ── */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 md:p-5">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Ср. SJT балл</p>
-              <p className="text-3xl font-black text-white/90">{family.sjtAverage.toFixed(1)}</p>
+              <p className="text-2xl md:text-3xl font-black text-white/90">{family.sjtAverage.toFixed(1)}</p>
             </div>
-            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5">
+            <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 md:p-5">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Ср. AI балл</p>
-              <p className="text-3xl font-black text-white/90">{family.aiAverage.toFixed(1)}</p>
+              <p className="text-2xl md:text-3xl font-black text-white/90">{family.aiAverage.toFixed(1)}</p>
             </div>
-            <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-5">
+            <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-4 md:p-5 col-span-2 md:col-span-1">
               <p className="text-[10px] font-bold text-violet-400/60 uppercase tracking-wider mb-1">Итоговый рейтинг</p>
-              <p className="text-3xl font-black text-violet-400">{family.totalScore.toFixed(1)}</p>
+              <p className="text-2xl md:text-3xl font-black text-violet-400">{family.totalScore.toFixed(1)}</p>
             </div>
           </div>
 
@@ -247,11 +247,11 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
 
                 return (
                   <div key={key} className={`flex flex-col md:flex-row border-b border-white/[0.05] last:border-b-0 ${idx % 2 === 0 ? 'bg-black/20' : ''}`}>
-                    <div className="md:w-1/3 p-6 flex-shrink-0 border-b md:border-b-0 md:border-r border-white/[0.05]">
+                    <div className="md:w-1/3 p-4 md:p-6 flex-shrink-0 border-b md:border-b-0 md:border-r border-white/[0.05]">
                       <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-white/50 uppercase tracking-wider mb-2">
                         Блок {question?.block || '?'} • Код {key}
                       </span>
-                      <p className="text-sm text-white/80 leading-relaxed font-medium">{questionText}</p>
+                      <p className="text-xs md:text-sm text-white/80 leading-relaxed font-medium">{questionText}</p>
                     </div>
                     <div className="flex-1 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/[0.05]">
                       {results.map((result, rIdx) => {
@@ -259,11 +259,11 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
                         const val = formatAnswerValue(raw, question);
 
                         return (
-                          <div key={result.id} className="flex-1 p-6">
-                            <p className="text-[10px] font-bold text-violet-400 mb-2 uppercase tracking-wider">
+                          <div key={result.id} className="flex-1 p-4 md:p-6">
+                            <p className="text-[10px] font-bold text-violet-400 mb-1.5 md:mb-2 uppercase tracking-wider">
                               Анкета {rIdx + 1} ({getRoleLabel(result)})
                             </p>
-                            <p className="text-sm text-white/70 leading-relaxed">{val}</p>
+                            <p className="text-xs md:text-sm text-white/70 leading-relaxed break-words">{val}</p>
                           </div>
                         );
                       })}
@@ -306,10 +306,10 @@ function ComparisonBlock({
       </h3>
 
       <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/[0.05] flex items-center justify-between">
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/[0.05] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Scale className="w-4 h-4 text-indigo-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-white/70">Закрытые тесты (Расхождения)</span>
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-white/70">Закрытые тесты (Расхождения)</span>
           </div>
           <div className="flex gap-3 text-xs font-bold">
             <span className="text-rose-400 flex items-center gap-1">
@@ -318,9 +318,9 @@ function ComparisonBlock({
           </div>
         </div>
 
-        <div className="divide-y divide-white/[0.04] max-h-[600px] overflow-y-auto custom-scrollbar">
+        <div className="divide-y divide-white/[0.04] max-h-[400px] md:max-h-[600px] overflow-y-auto custom-scrollbar">
           {mismatchItems.map((item) => (
-            <div key={item.code} className="px-5 py-4 bg-rose-500/5">
+            <div key={item.code} className="px-4 py-3 md:px-5 md:py-4 bg-rose-500/5">
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-0.5">
                   <XCircle className="w-4 h-4 text-rose-400" />
@@ -400,7 +400,7 @@ function AIResultPanel({ result, label, onRefresh }: { result: EvaluationResult;
   };
 
   return (
-    <div className={`relative flex flex-col rounded-2xl border p-5 gap-3 ${
+    <div className={`relative flex flex-col rounded-2xl border p-4 md:p-5 gap-3 ${
       hasError
         ? 'bg-amber-500/5 border-amber-500/15'
         : hasAI
@@ -449,7 +449,7 @@ function AIResultPanel({ result, label, onRefresh }: { result: EvaluationResult;
 
       {hasAI && (
         <>
-          <p className="text-sm text-white/75 leading-relaxed flex-1">{aiReasoning}</p>
+          <p className="text-xs md:text-sm text-white/75 leading-relaxed flex-1">{aiReasoning}</p>
           {ai.scores && (
             <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.05]">
               {Object.entries(ai.scores).map(([k, v]) => (
@@ -492,7 +492,7 @@ function ResponsibilityChart({ result, label }: { result: EvaluationResult; labe
   const childPct = Math.round((child / total) * 100);
 
   return (
-    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-5">
+    <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 md:p-5">
       <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-4">{label}</p>
 
       {/* Stacked bar */}
