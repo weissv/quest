@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { FamilyProfile, EvaluationResult, Question } from '@/types';
 import {
   Cpu, Target, BarChart, AlertTriangle, ArrowLeft,
-  RefreshCw, GitCompare, CheckCircle2, XCircle, Scale, Users, Sparkles
+  RefreshCw, GitCompare, CheckCircle2, XCircle, Scale, Users, Sparkles, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -117,9 +117,31 @@ function buildSjtDiff(results: EvaluationResult[], questions: Question[]): SjtDi
    Main Component
 ──────────────────────────────────────────────── */
 export default function FamilyDetailView({ family, questions, onBack, onRefreshResults }: FamilyDetailViewProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   if (!family) return null;
 
   const results = family.results;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/results?familyCode=${encodeURIComponent(family.code)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete family');
+      }
+      onRefreshResults();
+      onBack();
+    } catch (e) {
+      alert('Ошибка при удалении семьи');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   // Collect all unique answer keys for the Answers section
   const answerKeys = new Set<string>();
@@ -152,6 +174,17 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
               {family.results.length} анкет(а) · Обновлено {format(family.updatedAt, 'dd.MM HH:mm')}
             </p>
           </div>
+        </div>
+
+        {/* Delete Button */}
+        <div>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-3 py-1.5 md:px-4 md:py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/40 rounded-xl text-xs md:text-sm font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-1.5 md:gap-2"
+          >
+            <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">Удалить семью</span>
+          </button>
         </div>
       </div>
 
@@ -364,6 +397,34 @@ function ComparisonBlock({
           ))}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1a1313] border border-white/[0.08] rounded-2xl max-w-md w-full p-6 animate-scale-in shadow-2xl">
+            <h3 className="text-lg font-black text-white mb-2">Удаление профиля семьи</h3>
+            <p className="text-sm text-white/60 mb-6">
+              Вы действительно хотите удалить семью <span className="text-violet-400 font-bold">{family.code}</span>? Это действие безвозвратно удалит все заполненные анкеты ({family.results.length} шт.) этой семьи из базы данных.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold text-white/40 hover:text-white hover:bg-white/5 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-xs md:text-sm font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? 'Удаление...' : 'Да, удалить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
