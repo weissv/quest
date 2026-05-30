@@ -137,7 +137,7 @@ export default function Wizard() {
 
   if (isLoadingQuestions) {
     return (
-      <div className="glass-card-elevated p-6 md:p-10 flex items-center justify-center min-h-[300px]">
+      <div className="glass-card-elevated p-5 md:p-10 flex items-center justify-center min-h-[250px] md:min-h-[300px]">
         <div className="animate-pulse flex flex-col items-center">
           <div className="h-8 w-8 border-4 border-plum border-t-transparent rounded-full animate-spin mb-4" />
           <p className="text-foreground-secondary">Загрузка вопросов...</p>
@@ -159,7 +159,7 @@ export default function Wizard() {
   if (!currentQuestion) return null;
 
   return (
-    <div className="glass-card-elevated p-6 md:p-10">
+    <div className="glass-card-elevated p-5 md:p-10">
       <ProgressBar
         currentBlock={currentQuestion.block as import('@/types').BlockType}
         progress={progress}
@@ -171,9 +171,9 @@ export default function Wizard() {
         <BlockHeader block={currentQuestion.block as import('@/types').BlockType} showTransition />
       )}
 
-      <div className="h-px bg-gradient-to-r from-transparent via-foreground-tertiary/20 to-transparent mb-8" />
+      <div className="h-px bg-gradient-to-r from-transparent via-foreground-tertiary/20 to-transparent mb-6 md:mb-8" />
 
-      <div className="min-h-[260px]" key={currentQuestion.id}>
+      <div className="min-h-[220px] md:min-h-[260px]" key={currentQuestion.id}>
         <QuestionCard
           question={currentQuestion}
           currentAnswer={currentAnswer}
@@ -187,7 +187,7 @@ export default function Wizard() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-10 pt-6 border-t border-foreground-tertiary/10">
+      <div className="flex items-center justify-between mt-8 md:mt-10 pt-5 md:pt-6 border-t border-foreground-tertiary/10">
         <button
           onClick={() => {
             if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);

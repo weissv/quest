@@ -34,7 +34,7 @@ export default function ResultScreen({
       : '#A04A84';
 
   return (
-    <div className="glass-card-elevated p-8 md:p-10 animate-scale-in">
+    <div className="glass-card-elevated p-6 md:p-10 animate-scale-in">
       {/* Header */}
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-surface-raised mb-4">
@@ -55,8 +55,8 @@ export default function ResultScreen({
       </div>
 
       {/* SJT Score visualization — ADMIN-ONLY info, visible only on result screen */}
-      <div className="glass-card p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
+      <div className="glass-card p-5 md:p-6 mb-5 md:mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 gap-1 md:gap-0">
           <span className="text-sm font-medium text-foreground-secondary">
             Балл SJT (служебная информация)
           </span>
@@ -90,7 +90,7 @@ export default function ResultScreen({
 
       {/* AI Analysis (if present) */}
       {result.aiAnalysis && !result.aiAnalysis.error && (
-        <div className="glass-card p-6 mb-6">
+        <div className="glass-card p-5 md:p-6 mb-5 md:mb-6">
           <h3 className="text-sm font-semibold text-foreground-secondary uppercase tracking-wider mb-4">
             🤖 AI-анализ открытых ответов
           </h3>
@@ -158,7 +158,7 @@ export default function ResultScreen({
 
       {/* AI error */}
       {result.aiAnalysis?.error && (
-        <div className="glass-card p-6 mb-6">
+        <div className="glass-card p-5 md:p-6 mb-5 md:mb-6">
           <div className="flex items-center gap-2 text-peach">
             <span>⚠️</span>
             <span className="text-sm font-medium">

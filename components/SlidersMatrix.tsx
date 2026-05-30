@@ -77,10 +77,10 @@ export default function SlidersMatrix({ value, onChange }: SlidersMatrixProps) {
 
   const renderSlider = (key: 'school' | 'family' | 'child', label: string, colorClass: string) => {
     return (
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <label className="text-foreground-secondary font-medium">{label}</label>
-          <span className={`font-bold text-lg ${colorClass}`}>{values[key]}%</span>
+      <div className="mb-5 md:mb-6">
+        <div className="flex justify-between items-center mb-1 md:mb-2">
+          <label className="text-foreground-secondary font-medium text-xs md:text-base">{label}</label>
+          <span className={`font-bold text-sm md:text-lg ${colorClass}`}>{values[key]}%</span>
         </div>
         <input
           type="range"
@@ -95,14 +95,14 @@ export default function SlidersMatrix({ value, onChange }: SlidersMatrixProps) {
   };
 
   return (
-    <div className="glass-card p-6 md:p-8 animate-fade-in-up mt-4">
+    <div className="glass-card p-4 md:p-8 animate-fade-in-up mt-3 md:mt-4">
       {renderSlider('school', 'Школа (учителя, кураторы, система)', 'text-teal-light')}
-      {renderSlider('family', 'Семья (родители, репетиторы от родителей)', 'text-success')}
+      {renderSlider('family', 'Семья (родители, репетиторы)', 'text-success')}
       {renderSlider('child', 'Ребенок (сам ученик)', 'text-plum-light')}
 
-      <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
-        <span className="text-foreground-secondary font-medium">Сумма ответственности:</span>
-        <span className={`font-bold text-xl ${values.school + values.family + values.child === 100 ? 'text-success' : 'text-rose-500'}`}>
+      <div className="mt-6 md:mt-8 pt-5 md:pt-6 border-t border-white/10 flex justify-between items-center">
+        <span className="text-foreground-secondary font-medium text-sm md:text-base">Сумма:</span>
+        <span className={`font-bold text-lg md:text-xl ${values.school + values.family + values.child === 100 ? 'text-success' : 'text-rose-500'}`}>
           {values.school + values.family + values.child}%
         </span>
       </div>

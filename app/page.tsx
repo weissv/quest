@@ -6,7 +6,7 @@ export default function Home() {
       <div className="fixed top-0 left-0 w-full h-full gradient-mesh opacity-30 pointer-events-none -z-10" />
       <div className="max-w-3xl mx-auto pt-8 md:pt-16 pb-20 p-4 md:p-8 relative z-10">
         {/* Hero header */}
-        <header className="mb-10 md:mb-14 animate-fade-in-up glass-card-elevated p-8 md:p-12 relative overflow-hidden group">
+        <header className="mb-8 md:mb-14 animate-fade-in-up glass-card-elevated p-6 md:p-12 relative overflow-hidden group">
           {/* Subtle glow accents */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-plum/20 rounded-full blur-[100px] -z-10 pointer-events-none transition-transform duration-700 group-hover:scale-110"></div>
           <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-teal/15 rounded-full blur-[90px] -z-10 pointer-events-none animate-pulse-slow"></div>
@@ -20,9 +20,9 @@ export default function Home() {
           </div>
 
           {/* Title */}
-          <h1 className="sp-title text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] mb-6 drop-shadow-md">
+          <h1 className="sp-title text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] mb-4 md:mb-6 drop-shadow-md">
             Знакомство <br className="hidden md:block" />
-            <span className="mt-2 inline-block shadow-glass">с семьёй</span>
+            <span className="mt-1 md:mt-2 inline-block shadow-glass">с семьёй</span>
           </h1>
 
           {/* Subtitle — warm, approachable language for parents */}
@@ -32,7 +32,7 @@ export default function Home() {
           </p>
 
           {/* Trust indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 md:mt-8">
             <div className="service-box-ref">
               <span className="text-2xl">🔒</span>
               <div className="flex flex-col">

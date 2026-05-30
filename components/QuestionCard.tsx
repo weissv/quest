@@ -25,7 +25,7 @@ export default function QuestionCard({
   return (
     <div className="animate-slide-up">
       {/* Question text */}
-      <h3 className="text-xl md:text-2xl font-bold text-foreground leading-snug mb-8 text-balance">
+      <h3 className="text-lg md:text-2xl font-bold text-foreground leading-snug mb-5 md:mb-8 text-balance">
         {question.text}
       </h3>
 
