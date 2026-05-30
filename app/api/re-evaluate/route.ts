@@ -118,29 +118,10 @@ export async function POST(req: Request) {
       }
     }
 
-    // ── 5. Determine Overall Status ──
-    let finalStatus = 'pending';
-    if (sjtScore <= 4) {
-      finalStatus = 'rejected';
-    } else if (sjtScore >= 10) {
-      finalStatus = 'approved';
-    } else if (aiAnalysis) {
-      const totalScore = sjtScore + (aiAnalysis.total_score || 0);
-      if (totalScore >= 11) {
-        finalStatus = 'approved';
-      } else {
-        finalStatus = 'rejected';
-      }
-      if (aiAnalysis.status === 'rejected') {
-        finalStatus = 'rejected';
-      }
-    }
-
-    // Update the DB
+    // Update the DB without touching the status block
     const updated = await prisma.result.update({
       where: { id: resultId },
       data: {
-        status: finalStatus,
         aiAnalysis: aiAnalysis || {},
       },
     });
