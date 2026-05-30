@@ -14,7 +14,6 @@ interface KanbanBoardProps {
 const COLUMNS: { id: PipelineStatus; label: string; color: string; border: string }[] = [
   { id: 'pending', label: 'Новые (Pending)', color: 'text-violet-400', border: 'border-violet-500/20' },
   { id: 'review', label: 'На ревью (Review)', color: 'text-amber-400', border: 'border-amber-500/20' },
-  { id: 'interview', label: 'Собеседование', color: 'text-cyan-400', border: 'border-cyan-500/20' },
   { id: 'approved', label: 'Одобрены', color: 'text-emerald-400', border: 'border-emerald-500/20' },
   { id: 'rejected', label: 'Отказ', color: 'text-rose-400', border: 'border-rose-500/20' },
 ];

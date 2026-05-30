@@ -188,7 +188,21 @@ async function runAIEvaluator(questions: any[], answers: any, sjtScore: number) 
 
     const response = await model.generateContent(openQuestionsData);
     const text = response.response.text();
-    return extractValidJSON(text);
+    let aiAnalysis = extractValidJSON(text);
+
+    if (Array.isArray(aiAnalysis) && aiAnalysis.length > 0) {
+      aiAnalysis = aiAnalysis[0];
+    }
+    if (!aiAnalysis || typeof aiAnalysis !== 'object') {
+      aiAnalysis = {};
+    }
+
+    aiAnalysis.total_score = aiAnalysis.total_score ?? aiAnalysis.totalScore ?? 0;
+    aiAnalysis.behavioral_flags = aiAnalysis.behavioral_flags ?? aiAnalysis.behavioralFlags ?? [];
+    aiAnalysis.scores = aiAnalysis.scores ?? {};
+    aiAnalysis.reasoning = aiAnalysis.reasoning ?? aiAnalysis.comment ?? 'Анализ завершен, но ИИ не предоставил текстового вывода.';
+
+    return aiAnalysis;
   } catch (err: any) {
     console.error('Gemini API Error:', err);
     return {

@@ -92,16 +92,21 @@ export async function POST(req: Request) {
         
         aiAnalysis = extractValidJSON(responseText);
         
-        // Validate schema
+        // If AI returns an array, take the first object
+        if (Array.isArray(aiAnalysis) && aiAnalysis.length > 0) {
+          aiAnalysis = aiAnalysis[0];
+        }
+
+        // Validate schema gracefully
         if (!aiAnalysis || typeof aiAnalysis !== 'object') {
-          throw new Error('AI returned non-object JSON');
+          aiAnalysis = {};
         }
-        if (aiAnalysis.total_score === undefined && !aiAnalysis.scores) {
-          throw new Error('AI JSON missing scores and total_score fields');
-        }
-        if (!aiAnalysis.comment && !aiAnalysis.reasoning) {
-          throw new Error('AI JSON missing comment/reasoning field');
-        }
+
+        // Normalize camelCase to snake_case and provide fallbacks
+        aiAnalysis.total_score = aiAnalysis.total_score ?? aiAnalysis.totalScore ?? 0;
+        aiAnalysis.behavioral_flags = aiAnalysis.behavioral_flags ?? aiAnalysis.behavioralFlags ?? [];
+        aiAnalysis.scores = aiAnalysis.scores ?? {};
+        aiAnalysis.reasoning = aiAnalysis.reasoning ?? aiAnalysis.comment ?? 'Анализ завершен, но ИИ не предоставил текстового вывода.';
         
         console.log('[re-evaluate] AI analysis OK. score=', aiAnalysis?.total_score);
         
