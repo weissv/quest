@@ -45,11 +45,11 @@ export async function POST(req: Request) {
           answers, 
           sjtScore,
           totalScore: sjtScore, 
-          status: 'APPROVED', 
-          aiReasoning: 'Автоматический проход по результатам SJT-ядра (высокая субъектность/комплаенс).'
+          status: 'PENDING', 
+          aiReasoning: 'Рекомендация системы: APPROVED. Автоматический проход по результатам SJT-ядра (высокая субъектность/комплаенс).'
         }
       });
-      return NextResponse.json({ status: 'APPROVED', result });
+      return NextResponse.json({ status: 'PENDING', result });
     }
 
     if (sjtScore <= 6) { // Auto-reject threshold adjusted to <= 6 as per blueprint
@@ -61,11 +61,11 @@ export async function POST(req: Request) {
           answers, 
           sjtScore,
           totalScore: sjtScore, 
-          status: 'REJECTED', 
-          aiReasoning: 'Автоматический отказ. Критически низкий уровень базового комплаенса и партнерства.'
+          status: 'PENDING', 
+          aiReasoning: 'Рекомендация системы: REJECTED. Автоматический отказ. Критически низкий уровень базового комплаенса и партнерства.'
         }
       });
-      return NextResponse.json({ status: 'REJECTED', result });
+      return NextResponse.json({ status: 'PENDING', result });
     }
 
     // 4. СЕРАЯ ЗОНА: Вызов ИИ Оценщика (Блок B + C)
@@ -76,13 +76,13 @@ export async function POST(req: Request) {
 
     const totalScore = sjtScore + (aiEvaluation.total_score || 0);
     // Decision logic based on total score (13.5) or if matrix anomaly flag is true
-    let finalStatus = totalScore >= 13.5 ? 'APPROVED' : 'REJECTED';
+    let recommendedStatus = totalScore >= 13.5 ? 'APPROVED' : 'REJECTED';
     
     // If dyad analysis finds conflict, we route to INTERVIEW/REVIEW instead of auto-approve/reject
-    if (finalDyadMetrics.roleConflict && finalStatus === 'APPROVED') {
-      finalStatus = 'INTERVIEW';
-    } else if (finalStatus === 'REJECTED' && totalScore >= 12) {
-      finalStatus = 'REVIEW';
+    if (finalDyadMetrics.roleConflict && recommendedStatus === 'APPROVED') {
+      recommendedStatus = 'INTERVIEW';
+    } else if (recommendedStatus === 'REJECTED' && totalScore >= 12) {
+      recommendedStatus = 'REVIEW';
     }
 
     const result = await prisma.result.create({
@@ -94,15 +94,15 @@ export async function POST(req: Request) {
         sjtScore,
         aiScore: aiEvaluation.total_score,
         totalScore: totalScore,
-        status: finalStatus,
+        status: 'PENDING',
         aiAnalysis: aiEvaluation,
-        aiReasoning: aiEvaluation.reasoning,
+        aiReasoning: `Рекомендация ИИ: ${recommendedStatus}. ` + (aiEvaluation.reasoning || ''),
         behavioralFlags: aiEvaluation.behavioral_flags || [],
         dyadMetrics: finalDyadMetrics
       }
     });
 
-    return NextResponse.json({ status: finalStatus, result });
+    return NextResponse.json({ status: 'PENDING', result });
 
   } catch (error: any) {
     console.error('Evaluate API Error:', error);

@@ -46,7 +46,7 @@ export default function KanbanBoard({ families, onStatusChange, onFamilyClick }:
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-6 custom-scrollbar min-h-[600px] items-start">
+    <div className="flex gap-4 overflow-x-auto pb-6 custom-scrollbar h-full items-stretch">
       {COLUMNS.map((col) => {
         const columnFamilies = families.filter((f) => f.status === col.id);
         
@@ -55,7 +55,7 @@ export default function KanbanBoard({ families, onStatusChange, onFamilyClick }:
             key={col.id}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, col.id)}
-            className={`flex-shrink-0 w-[300px] flex flex-col bg-white/[0.02] border border-white/[0.05] rounded-2xl h-full min-h-[500px] overflow-hidden transition-colors ${activeDragId ? 'border-dashed border-white/20' : ''}`}
+            className={`flex-shrink-0 w-[300px] flex flex-col bg-white/[0.02] border border-white/[0.05] rounded-2xl max-h-full overflow-hidden transition-colors ${activeDragId ? 'border-dashed border-white/20' : ''}`}
           >
             {/* Column Header */}
             <div className={`p-4 border-b ${col.border} bg-white/[0.01]`}>
