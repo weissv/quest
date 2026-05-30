@@ -162,15 +162,21 @@ export default function FamilyDetailView({ family, questions, onBack, onRefreshR
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 md:p-5">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Ср. SJT балл</p>
-              <p className="text-2xl md:text-3xl font-black text-white/90">{family.sjtAverage.toFixed(1)}</p>
+              <p className="text-2xl md:text-3xl font-black text-white/90">
+                {family.sjtAverage.toFixed(1)}<span className="text-base md:text-xl text-white/30 font-bold">/12</span>
+              </p>
             </div>
             <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 md:p-5">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Ср. AI балл</p>
-              <p className="text-2xl md:text-3xl font-black text-white/90">{family.aiAverage.toFixed(1)}</p>
+              <p className="text-2xl md:text-3xl font-black text-white/90">
+                {family.aiAverage.toFixed(1)}<span className="text-base md:text-xl text-white/30 font-bold">/12</span>
+              </p>
             </div>
             <div className="bg-violet-500/10 border border-violet-500/20 rounded-2xl p-4 md:p-5 col-span-2 md:col-span-1">
               <p className="text-[10px] font-bold text-violet-400/60 uppercase tracking-wider mb-1">Итоговый рейтинг</p>
-              <p className="text-2xl md:text-3xl font-black text-violet-400">{family.totalScore.toFixed(1)}</p>
+              <p className="text-2xl md:text-3xl font-black text-violet-400">
+                {family.totalScore.toFixed(1)}<span className="text-base md:text-xl text-violet-400/40 font-bold">/24</span>
+              </p>
             </div>
           </div>
 
